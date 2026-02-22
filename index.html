@@ -350,41 +350,102 @@
       box-shadow: 0 0 10px rgba(255, 95, 95, 0.25);
     }
 
+    .fx-dim {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 6, 14, 0.24);
+      opacity: 0;
+      transition: opacity 150ms linear;
+      pointer-events: none;
+      z-index: 12;
+    }
+
+    body.event-active .fx-dim {
+      opacity: 1;
+    }
+
     .game-screen {
       display: none;
-      width: min(1120px, 98vw);
-      max-height: 97vh;
+      width: min(1120px, 100%);
+      height: min(100dvh - 14px, 940px);
       gap: 8px;
-      grid-template-rows: auto auto 1fr;
+      grid-template-rows: auto 1fr auto;
+      overflow: hidden;
+      position: relative;
+      z-index: 20;
     }
 
     .game-screen.active {
       display: grid;
     }
 
-    .hud,
-    .sub-hud {
+    .hud {
       border: 3px solid #2c90b2;
-      background: rgba(10, 16, 35, 0.82);
+      background: rgba(10, 16, 35, 0.86);
       padding: 8px 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
+      display: grid;
+      gap: 6px;
+      justify-items: center;
+      text-align: center;
+    }
+
+    .turn-indicator {
+      display: inline-block;
+      font-size: clamp(17px, 5vw, 30px);
+      line-height: 1.2;
+      letter-spacing: 0.6px;
+      font-weight: 700;
+      color: #b7f4ff;
+      text-shadow: 1px 1px 0 #000;
+      border: 2px solid #2f8aa7;
+      background: rgba(10, 14, 30, 0.7);
+      padding: 6px 12px;
+      min-width: min(94vw, 520px);
+    }
+
+    .turn-indicator.turn-flash {
+      animation: turnFlash 0.54s steps(2, end) 1;
+    }
+
+    @keyframes turnFlash {
+      0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 rgba(255, 220, 111, 0);
+      }
+      45% {
+        transform: scale(1.03);
+        box-shadow: 0 0 18px rgba(255, 220, 111, 0.46);
+      }
+      100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 rgba(255, 220, 111, 0);
+      }
+    }
+
+    .hud-meta {
+      width: 100%;
+      display: grid;
+      gap: 6px;
+      justify-items: center;
     }
 
     .hud-text {
-      font-size: 13px;
+      font-size: clamp(11px, 2.9vw, 14px);
       letter-spacing: 0.4px;
       text-shadow: 1px 1px 0 #000;
+      text-align: center;
+      max-width: 100%;
+      word-break: break-word;
     }
 
     .scoreboard {
+      width: 100%;
       display: flex;
-      gap: 10px;
+      gap: 8px;
       flex-wrap: wrap;
-      font-size: 13px;
+      justify-content: center;
+      font-size: clamp(11px, 2.8vw, 14px);
+      text-align: center;
     }
 
     .mark-x {
@@ -398,24 +459,53 @@
     }
 
     .arena {
+      min-height: 0;
       display: grid;
-      grid-template-columns: minmax(300px, auto) minmax(250px, 310px);
-      align-items: start;
-      justify-content: center;
-      gap: 12px;
-      padding: 4px;
-      overflow: auto;
+      grid-template-columns: 1fr;
+      justify-items: center;
+      align-content: start;
+      gap: 10px;
+      overflow-x: hidden;
+      overflow-y: auto;
+      padding: 2px 0;
     }
 
     .board-shell {
       width: var(--board-size);
       height: var(--board-size);
+      max-width: 100%;
       border: 4px solid var(--grid);
-      background: rgba(8, 11, 23, 0.72);
+      background: rgba(8, 11, 23, 0.74);
       box-shadow: 0 0 24px rgba(66, 230, 255, 0.33);
-      padding: 6px;
+      padding: 2px;
       position: relative;
       overflow: hidden;
+      touch-action: manipulation;
+    }
+
+    .pass-banner {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: min(92%, 420px);
+      border: 3px solid var(--warn);
+      background: rgba(24, 16, 39, 0.95);
+      color: var(--warn);
+      text-transform: uppercase;
+      text-align: center;
+      letter-spacing: 1px;
+      font-size: clamp(14px, 4.5vw, 24px);
+      text-shadow: 1px 1px 0 #000;
+      padding: 10px 12px;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 5;
+      transition: opacity 100ms linear;
+    }
+
+    .pass-banner.show {
+      opacity: 1;
     }
 
     .board-shell.major-shake {
@@ -452,14 +542,14 @@
       display: grid;
       grid-template-columns: repeat(5, 1fr);
       grid-template-rows: repeat(5, 1fr);
-      gap: 4px;
+      gap: 3px;
       background: #0b0f23;
-      border: 3px solid #205675;
-      padding: 4px;
+      border: 2px solid #205675;
+      padding: 2px;
     }
 
     .cell {
-      border: 3px solid #1f3e66;
+      border: 2px solid #1f3e66;
       background: linear-gradient(180deg, #171b3a, #10132b);
       display: grid;
       place-items: center;
@@ -468,6 +558,10 @@
       image-rendering: pixelated;
       overflow: hidden;
       transition: border-color 0.12s linear, box-shadow 0.12s linear, background 0.12s linear;
+      min-width: 48px;
+      min-height: 48px;
+      aspect-ratio: 1 / 1;
+      touch-action: manipulation;
     }
 
     .cell.blocked {
@@ -577,10 +671,14 @@
     .event-panel {
       border: 4px solid #2c90b2;
       background: linear-gradient(180deg, rgba(14, 18, 42, 0.95), rgba(9, 12, 27, 0.95));
-      min-height: var(--board-size);
+      width: min(100%, 520px);
+      height: clamp(220px, 30vh, 420px);
       padding: 8px;
       position: relative;
       overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 8px;
     }
 
     .event-panel-head {
@@ -591,12 +689,11 @@
       font-size: 12px;
       letter-spacing: 0.8px;
       padding: 6px 8px;
-      margin-bottom: 8px;
       text-shadow: 1px 1px 0 #000;
     }
 
     .event-idle {
-      margin: 8px 0;
+      margin: 0;
       font-size: 13px;
       color: var(--muted);
       line-height: 1.45;
@@ -604,18 +701,22 @@
       padding: 10px;
       background: rgba(10, 14, 30, 0.64);
       text-shadow: 1px 1px 0 #000;
+      align-self: start;
     }
 
     .event-card {
       border: 3px solid #31b5d2;
       background: linear-gradient(180deg, #1a1f46, #111633);
-      padding: 10px;
-      display: grid;
-      gap: 8px;
+      padding: 8px;
       transform: translateX(120%);
       opacity: 0;
       transition: transform 220ms steps(4, end), opacity 140ms linear;
       pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      height: 100%;
+      gap: 8px;
     }
 
     .event-panel.active .event-card {
@@ -628,6 +729,15 @@
     .event-panel.active {
       border-color: var(--warn);
       box-shadow: 0 0 18px rgba(255, 220, 111, 0.34);
+    }
+
+    .event-body {
+      min-height: 0;
+      overflow-y: auto;
+      display: grid;
+      gap: 8px;
+      align-content: start;
+      padding-right: 2px;
     }
 
     .event-kicker {
@@ -643,7 +753,7 @@
       color: var(--warn);
       text-transform: uppercase;
       text-shadow: 1px 1px 0 #000;
-      font-size: 21px;
+      font-size: clamp(17px, 4.8vw, 22px);
       line-height: 1.2;
     }
 
@@ -671,37 +781,74 @@
     }
 
     .event-actions {
+      margin-top: auto;
+      border-top: 2px solid #2b7391;
+      padding-top: 8px;
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(180deg, rgba(12, 18, 39, 0.92), rgba(8, 12, 28, 0.96));
     }
 
     .event-actions .pixel-btn {
-      font-size: 12px;
-      padding: 7px 10px;
+      min-width: min(92%, 230px);
+      font-size: 13px;
+      padding: 10px 12px;
+      text-align: center;
     }
 
-    @media (max-width: 1000px) {
-      :root {
-        --board-size: min(74vmin, 500px);
-      }
+    .control-row {
+      border: 3px solid #2c90b2;
+      background: rgba(10, 16, 35, 0.84);
+      padding: 8px;
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
 
+    .control-row .pixel-btn {
+      font-size: 12px;
+      padding: 8px 10px;
+    }
+
+    @media (min-width: 768px) {
       .arena {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(300px, auto) minmax(270px, 320px);
+        align-items: start;
+        justify-content: center;
+        gap: 12px;
       }
 
       .event-panel {
-        min-height: 250px;
-      }
-    }
-
-    @media (max-width: 760px) {
-      :root {
-        --board-size: min(80vmin, 430px);
+        width: 100%;
+        height: var(--board-size);
       }
 
-      .event-name {
-        font-size: 18px;
+      .hud {
+        padding: 9px 12px;
+      }
+
+      .scoreboard {
+        justify-content: center;
+      }
+
+      .board {
+        border: 3px solid #205675;
+        padding: 4px;
+        gap: 4px;
+      }
+
+      .cell {
+        border: 3px solid #1f3e66;
+        min-width: 0;
+        min-height: 0;
+      }
+
+      .board-shell {
+        padding: 4px;
       }
     }
   </style>
@@ -763,23 +910,17 @@
 
     <section id="gameScreen" class="game-screen" aria-label="Gameplay board">
       <div class="hud">
-        <div id="turnText" class="hud-text">Turn:</div>
-        <div id="statusText" class="hud-text">Status:</div>
-        <div id="scoreText" class="scoreboard"></div>
-      </div>
-
-      <div class="sub-hud">
-        <div id="roundText" class="hud-text">Round 1</div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button id="nextRoundBtn" class="pixel-btn" type="button" disabled>Next Round</button>
-          <button id="toSetupFromGameBtn" class="pixel-btn" type="button">Setup</button>
-          <button id="resetScoresBtn" class="pixel-btn" type="button">Reset Scores</button>
-          <button id="crtToggleBtn" class="pixel-btn" type="button">CRT: ON</button>
+        <div id="turnText" class="turn-indicator">Turn:</div>
+        <div class="hud-meta">
+          <div id="roundText" class="hud-text">Round 1</div>
+          <div id="scoreText" class="scoreboard"></div>
+          <div id="statusText" class="hud-text">Status:</div>
         </div>
       </div>
 
       <div class="arena">
         <div id="boardShell" class="board-shell">
+          <div id="passBanner" class="pass-banner"></div>
           <div id="board" class="board"></div>
         </div>
 
@@ -787,18 +928,28 @@
           <div class="event-panel-head">Chaos Console</div>
           <p id="eventIdle" class="event-idle">No active event. Place marks and watch for hidden chaos triggers.</p>
           <div id="eventCard" class="event-card">
-            <p id="eventKicker" class="event-kicker">Chaos Event Triggered</p>
-            <h3 id="eventName" class="event-name">Event</h3>
-            <p id="eventDesc" class="event-desc"></p>
-            <p id="eventTrigger" class="event-trigger"></p>
-            <p id="eventHelper" class="event-helper"></p>
-            <p id="eventStatus" class="event-status"></p>
+            <div id="eventBody" class="event-body">
+              <p id="eventKicker" class="event-kicker">Chaos Event Triggered</p>
+              <h3 id="eventName" class="event-name">Event</h3>
+              <p id="eventDesc" class="event-desc"></p>
+              <p id="eventTrigger" class="event-trigger"></p>
+              <p id="eventHelper" class="event-helper"></p>
+              <p id="eventStatus" class="event-status"></p>
+            </div>
             <div id="eventActions" class="event-actions"></div>
           </div>
         </aside>
       </div>
+
+      <div class="control-row">
+        <button id="nextRoundBtn" class="pixel-btn" type="button" disabled>Next Round</button>
+        <button id="toSetupFromGameBtn" class="pixel-btn" type="button">Setup</button>
+        <button id="resetScoresBtn" class="pixel-btn" type="button">Reset Scores</button>
+        <button id="crtToggleBtn" class="pixel-btn" type="button">CRT: ON</button>
+      </div>
     </section>
   </main>
+  <div id="fxDim" class="fx-dim" aria-hidden="true"></div>
 
   <script>
     const SIZE = 5;
@@ -919,6 +1070,7 @@
       resetScoresBtn: document.getElementById("resetScoresBtn"),
       crtToggleBtn: document.getElementById("crtToggleBtn"),
       boardShell: document.getElementById("boardShell"),
+      passBanner: document.getElementById("passBanner"),
       board: document.getElementById("board"),
       eventPanel: document.getElementById("eventPanel"),
       eventCard: document.getElementById("eventCard"),
@@ -966,12 +1118,21 @@
       mirrorConstraint: null,
       freezeRows: new Map(),
       playersWhoPlaced: new Set(),
-      lastPlacementIndex: null
+      lastPlacementIndex: null,
+      passBannerActive: false,
+      placementGuardUntil: 0
     };
 
     const audioState = {
       ctx: null,
       ready: false
+    };
+
+    const interactionState = {
+      isMobileLayout: window.matchMedia("(max-width: 767px)").matches,
+      tapDebounceMs: 220,
+      lastTapAt: 0,
+      inputLockedUntil: 0
     };
 
     function createCell() {
@@ -1026,6 +1187,65 @@
       if (which === "game") ui.gameScreen.classList.add("active");
     }
 
+    function isMobileLayout() {
+      return interactionState.isMobileLayout;
+    }
+
+    function selectionInstructionText() {
+      return isMobileLayout()
+        ? "Tap once to preview. Tap again to confirm."
+        : "Hover to preview. Click to confirm.";
+    }
+
+    function lockInput(ms) {
+      const until = performance.now() + ms;
+      if (until > interactionState.inputLockedUntil) {
+        interactionState.inputLockedUntil = until;
+      }
+    }
+
+    function consumeTapDebounce() {
+      const now = performance.now();
+      if (now < interactionState.inputLockedUntil) return false;
+      if (now - interactionState.lastTapAt < interactionState.tapDebounceMs) return false;
+      interactionState.lastTapAt = now;
+      return true;
+    }
+
+    function isBoardInteractionLocked() {
+      const now = performance.now();
+      if (now < interactionState.inputLockedUntil) return true;
+      if (now < roundState.placementGuardUntil) return true;
+      if (roundState.passBannerActive) return true;
+      return false;
+    }
+
+    function updateBoardSizeForViewport() {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      interactionState.isMobileLayout = vw < 768;
+
+      let size;
+      if (interactionState.isMobileLayout) {
+        const maxWidth = Math.max(260, vw - 20);
+        const maxHeight = Math.max(260, vh - 500);
+        size = Math.min(maxWidth, maxHeight);
+        size = Math.max(260, Math.min(size, 520));
+      } else {
+        const maxWidth = Math.min(620, vw * 0.56);
+        const maxHeight = Math.max(260, vh - 240);
+        size = Math.min(maxWidth, maxHeight);
+        size = Math.max(260, Math.min(size, 600));
+      }
+
+      document.documentElement.style.setProperty("--board-size", `${Math.floor(size)}px`);
+
+      if (eventState.pending && ["row", "col", "diag", "rowShift"].includes(eventState.pending.mode)) {
+        setEventHelper(selectionInstructionText());
+      }
+      renderBoard();
+    }
+
     function escapeHtml(text) {
       return text
         .replaceAll("&", "&amp;")
@@ -1076,6 +1296,9 @@
         playTone(170, 0.22, "sawtooth", 0.085);
         playTone(240, 0.22, "sawtooth", 0.08, 0.23);
         playTone(170, 0.22, "sawtooth", 0.085, 0.46);
+      } else if (kind === "handoff") {
+        playTone(210, 0.06, "square", 0.06);
+        playTone(280, 0.06, "square", 0.06, 0.07);
       } else if (kind === "win") {
         playTone(260, 0.08, "square", 0.08);
         playTone(330, 0.09, "square", 0.08, 0.08);
@@ -1149,8 +1372,24 @@
       ].join("");
     }
 
+    function flashTurnIndicator() {
+      ui.turnText.classList.remove("turn-flash");
+      void ui.turnText.offsetWidth;
+      ui.turnText.classList.add("turn-flash");
+      setTimeout(() => ui.turnText.classList.remove("turn-flash"), 620);
+    }
+
+    function showPassBanner(nextPlayerName) {
+      ui.passBanner.textContent = `Pass to ${nextPlayerName}`;
+      ui.passBanner.classList.add("show");
+    }
+
+    function hidePassBanner() {
+      ui.passBanner.classList.remove("show");
+    }
+
     function updateGameControls() {
-      const lock = eventState.active;
+      const lock = eventState.active || roundState.passBannerActive;
       ui.nextRoundBtn.disabled = lock || !roundState.gameOver;
       ui.toSetupFromGameBtn.disabled = lock;
       ui.resetScoresBtn.disabled = lock;
@@ -1171,6 +1410,7 @@
 
       ui.eventIdle.hidden = true;
       ui.eventPanel.classList.add("active");
+      document.body.classList.add("event-active");
     }
 
     function hideEventPanel() {
@@ -1179,6 +1419,7 @@
       ui.eventActions.innerHTML = "";
       ui.eventStatus.textContent = "";
       ui.eventHelper.textContent = "";
+      document.body.classList.remove("event-active");
     }
 
     function setEventHelper(text) {
@@ -1199,6 +1440,8 @@
         btn.disabled = Boolean(action.disabled);
         btn.addEventListener("click", () => {
           if (btn.disabled || !eventState.active) return;
+          if (!consumeTapDebounce()) return;
+          lockInput(140);
           action.onClick();
         });
         ui.eventActions.appendChild(btn);
@@ -1223,6 +1466,7 @@
       eventState.currentType = null;
       eventState.triggerPlayerId = null;
       eventState.pending = null;
+      interactionState.inputLockedUntil = 0;
 
       document.body.classList.remove("screen-pulse");
       ui.board.classList.remove("selection-mode");
@@ -1239,6 +1483,9 @@
       roundState.freezeRows = new Map();
       roundState.playersWhoPlaced = new Set();
       roundState.lastPlacementIndex = null;
+      roundState.passBannerActive = false;
+      roundState.placementGuardUntil = 0;
+      hidePassBanner();
     }
 
     function startRoundFromSetup() {
@@ -1256,19 +1503,21 @@
       setStatus(`${currentPlayer().name} opens the round.`);
       showScreen("game");
       renderHud();
+      flashTurnIndicator();
       renderBoard();
       updateGameControls();
       updateSetupPreview();
+      updateBoardSizeForViewport();
     }
 
     function startNextRound() {
-      if (!roundState.gameOver || eventState.active) return;
+      if (!roundState.gameOver || eventState.active || roundState.passBannerActive) return;
       roundState.roundNumber += 1;
       startRoundFromSetup();
     }
 
     function resetScores() {
-      if (eventState.active) return;
+      if (eventState.active || roundState.passBannerActive) return;
       playerState.players.p1.wins = 0;
       playerState.players.p2.wins = 0;
       roundState.roundNumber = 1;
@@ -1552,6 +1801,8 @@
     function endRound(winnerId, reason) {
       roundState.gameOver = true;
       roundState.winnerId = winnerId;
+      roundState.passBannerActive = false;
+      hidePassBanner();
 
       if (winnerId) {
         playerState.players[winnerId].wins += 1;
@@ -1592,6 +1843,31 @@
       }
     }
 
+    function beginTurnHandoff(nextPlayerId) {
+      playerState.currentPlayerId = nextPlayerId;
+      const nextPlayer = currentPlayer();
+
+      roundState.passBannerActive = true;
+      showPassBanner(nextPlayer.name);
+      setStatus(`Pass to ${nextPlayer.name}.`);
+      playSfx("handoff");
+      lockInput(1000);
+      renderHud();
+      renderBoard();
+      updateGameControls();
+
+      setTimeout(() => {
+        roundState.passBannerActive = false;
+        hidePassBanner();
+        enforceMirrorConstraint();
+        setStatus(`${currentPlayer().name}'s turn.`);
+        flashTurnIndicator();
+        renderHud();
+        renderBoard();
+        updateGameControls();
+      }, 1000);
+    }
+
     function finalizeTurnCycle() {
       roundState.placementsRemaining -= 1;
 
@@ -1608,14 +1884,12 @@
       if (roundState.extraTurnPending) {
         roundState.extraTurnPending = false;
         setStatus(`${currentPlayer().name} keeps the turn from Time Glitch.`);
+        renderHud();
+        renderBoard();
       } else {
-        playerState.currentPlayerId = otherPlayerId(playerState.currentPlayerId);
-        setStatus(`${currentPlayer().name}'s turn.`);
+        beginTurnHandoff(otherPlayerId(playerState.currentPlayerId));
+        return;
       }
-
-      enforceMirrorConstraint();
-      renderHud();
-      renderBoard();
     }
 
     function assignHiddenEvents() {
@@ -1665,6 +1939,7 @@
       updateGameControls();
       startEventAlertVisuals();
       playSfx("alarm");
+      lockInput(820);
       renderBoard();
 
       clearTimeout(eventState.alertTimer);
@@ -1684,6 +1959,7 @@
       eventState.currentType = null;
       eventState.triggerPlayerId = null;
       eventState.pending = null;
+      eventState.phase = "idle";
 
       ui.board.classList.remove("selection-mode");
       ui.boardShell.classList.remove("alert-glow", "alert-shimmer", "selection-glow");
@@ -1700,6 +1976,8 @@
       setEventStatus(statusText);
       setEventHelper("Event resolved. Returning to turn flow.");
       renderBoard();
+      roundState.placementGuardUntil = performance.now() + 300;
+      lockInput(300);
 
       setTimeout(() => {
         teardownEventState();
@@ -1724,6 +2002,9 @@
       eventState.pending = {
         hoverIndex: null,
         lastExclusiveDiag: null,
+        previewRow: null,
+        previewCol: null,
+        previewDiag: null,
         ...pending
       };
       ui.board.classList.add("selection-mode");
@@ -1918,7 +2199,7 @@
             noTargetContinue("Event fizzled: no erasable opponent tile.");
             return;
           }
-          setEventHelper("Hover to preview. Click to confirm.");
+          setEventHelper(selectionInstructionText());
           setEventStatus("Select an opponent tile to erase.");
           setPendingSelection({
             mode: "cell",
@@ -1938,7 +2219,7 @@
             noTargetContinue("Event fizzled: swap unavailable.");
             return;
           }
-          setEventHelper("Hover to preview. Click to confirm.");
+          setEventHelper(selectionInstructionText());
           setEventStatus("Step 1: Select one of your tiles.");
           setPendingSelection({
             mode: "swap",
@@ -1956,16 +2237,27 @@
             noTargetContinue("Event fizzled: no erasable row.");
             return;
           }
-          setEventHelper("Hover to preview. Click to confirm.");
-          setEventStatus("Hover any tile to preview a row, then click to wipe.");
+          setEventHelper(selectionInstructionText());
+          setEventStatus("Select a row to wipe, then press Confirm.");
+          setEventActions([
+            {
+              label: "Confirm Row Wipe",
+              danger: true,
+              disabled: true,
+              onClick: () => {
+                const pending = eventState.pending;
+                if (!pending || pending.selectedRow === null) return;
+                const changed = wipeRow(pending.selectedRow);
+                resolveEvent(changed ? `Row ${pending.selectedRow + 1} wiped.` : `Row ${pending.selectedRow + 1} could not be changed.`);
+              }
+            }
+          ]);
           setPendingSelection({
             mode: "row",
             validRows: rows,
-            baseStatus: "Hover any tile to preview a row, then click to wipe.",
-            onPick: (row) => {
-              const changed = wipeRow(row);
-              resolveEvent(changed ? `Row ${row + 1} wiped.` : `Row ${row + 1} could not be changed.`);
-            }
+            baseStatus: "Select a row to wipe, then press Confirm.",
+            selectedRow: null,
+            confirmRequired: true
           });
           break;
         }
@@ -1975,16 +2267,31 @@
             noTargetContinue("Event fizzled: no erasable column.");
             return;
           }
-          setEventHelper("Hover to preview. Click to confirm.");
-          setEventStatus("Hover any tile to preview a column, then click to wipe.");
+          setEventHelper(selectionInstructionText());
+          setEventStatus("Select a column to wipe, then press Confirm.");
+          setEventActions([
+            {
+              label: "Confirm Column Wipe",
+              danger: true,
+              disabled: true,
+              onClick: () => {
+                const pending = eventState.pending;
+                if (!pending || pending.selectedCol === null) return;
+                const changed = wipeColumn(pending.selectedCol);
+                resolveEvent(
+                  changed
+                    ? `Column ${pending.selectedCol + 1} wiped.`
+                    : `Column ${pending.selectedCol + 1} could not be changed.`
+                );
+              }
+            }
+          ]);
           setPendingSelection({
             mode: "col",
             validCols: cols,
-            baseStatus: "Hover any tile to preview a column, then click to wipe.",
-            onPick: (col) => {
-              const changed = wipeColumn(col);
-              resolveEvent(changed ? `Column ${col + 1} wiped.` : `Column ${col + 1} could not be changed.`);
-            }
+            baseStatus: "Select a column to wipe, then press Confirm.",
+            selectedCol: null,
+            confirmRequired: true
           });
           break;
         }
@@ -2011,17 +2318,28 @@
             noTargetContinue("Event fizzled: no erasable diagonal.");
             return;
           }
-          setEventHelper("Hover to preview. Click to confirm.");
-          setEventStatus("Choose a diagonal to erase.");
+          setEventHelper(selectionInstructionText());
+          setEventStatus("Choose a diagonal, then press Confirm.");
+          setEventActions([
+            {
+              label: "Confirm Diagonal Wipe",
+              danger: true,
+              disabled: true,
+              onClick: () => {
+                const pending = eventState.pending;
+                if (!pending || !pending.selectedDiag) return;
+                const changed = wipeDiagonal(pending.selectedDiag);
+                const label = pending.selectedDiag === "main" ? "Main" : "Anti";
+                resolveEvent(changed ? `${label} diagonal wiped.` : `${label} diagonal could not be changed.`);
+              }
+            }
+          ]);
           setPendingSelection({
             mode: "diag",
             validDiagonals: valid,
-            baseStatus: "Choose a diagonal to erase.",
-            onPick: (diag) => {
-              const changed = wipeDiagonal(diag);
-              const label = diag === "main" ? "Main" : "Anti";
-              resolveEvent(changed ? `${label} diagonal wiped.` : `${label} diagonal could not be changed.`);
-            }
+            baseStatus: "Choose a diagonal, then press Confirm.",
+            selectedDiag: null,
+            confirmRequired: true
           });
           break;
         }
@@ -2036,7 +2354,7 @@
             noTargetContinue("Event fizzled: no lockable tile.");
             return;
           }
-          setEventHelper("Hover to preview. Click to confirm.");
+          setEventHelper(selectionInstructionText());
           setEventStatus("Select a tile to lock permanently.");
           setPendingSelection({
             mode: "cell",
@@ -2056,7 +2374,7 @@
             noTargetContinue("Event fizzled: no shield target.");
             return;
           }
-          setEventHelper("Hover to preview. Click to confirm.");
+          setEventHelper(selectionInstructionText());
           setEventStatus("Select one of your tiles to shield.");
           setPendingSelection({
             mode: "cell",
@@ -2096,7 +2414,7 @@
             noTargetContinue("Event fizzled: no adjacent opponent tile.");
             return;
           }
-          setEventHelper("Hover to preview. Click to confirm.");
+          setEventHelper(selectionInstructionText());
           setEventStatus("Select adjacent opponent tile to convert.");
           setPendingSelection({
             mode: "cell",
@@ -2124,7 +2442,7 @@
             noTargetContinue("Event fizzled: all rows already frozen.");
             return;
           }
-          setEventHelper("Hover to preview. Click to confirm.");
+          setEventHelper(selectionInstructionText());
           setEventStatus("Select a row to freeze for two turns.");
           setPendingSelection({
             mode: "row",
@@ -2160,7 +2478,7 @@
             noTargetContinue("Event fizzled: no empty tile to block.");
             return;
           }
-          setEventHelper("Hover to preview. Click to confirm.");
+          setEventHelper(selectionInstructionText());
           setEventStatus("Select an empty tile to block permanently.");
           setPendingSelection({
             mode: "cell",
@@ -2215,7 +2533,7 @@
             return;
           }
 
-          setEventHelper("Hover to preview. Click to confirm.");
+          setEventHelper(selectionInstructionText());
           setEventStatus("Select a row to shift.");
           setPendingSelection({
             mode: "rowShift",
@@ -2284,6 +2602,7 @@
     function onCellHover(index) {
       const pending = eventState.pending;
       if (!pending) return;
+      if (isMobileLayout()) return;
       pending.hoverIndex = index;
 
       if (pending.mode === "diag") {
@@ -2302,6 +2621,25 @@
       const pending = eventState.pending;
       if (!pending) return;
 
+      if (isMobileLayout()) {
+        if (pending.mode === "row" && pending.previewRow !== null) {
+          setEventStatus(`Preview row: R${pending.previewRow + 1}. Tap again to confirm.`);
+          return;
+        }
+        if (pending.mode === "col" && pending.previewCol !== null) {
+          setEventStatus(`Preview column: C${pending.previewCol + 1}. Tap again to confirm.`);
+          return;
+        }
+        if (pending.mode === "diag" && pending.previewDiag) {
+          setEventStatus(
+            pending.previewDiag === "main"
+              ? "Preview main diagonal (red). Tap again to confirm."
+              : "Preview anti diagonal (blue). Tap again to confirm."
+          );
+          return;
+        }
+      }
+
       const index = pending.hoverIndex;
       if (index === null) {
         if (pending.baseStatus) setEventStatus(pending.baseStatus);
@@ -2319,22 +2657,42 @@
 
       if (pending.mode === "row") {
         if (pending.validRows.includes(row)) {
-          setEventStatus(`Preview row: R${row + 1}. Click to confirm.`);
+          setEventStatus(
+            pending.confirmRequired
+              ? `Preview row: R${row + 1}. Click to select, then press Confirm.`
+              : `Preview row: R${row + 1}. Click to confirm.`
+          );
         }
         return;
       }
 
       if (pending.mode === "col") {
         if (pending.validCols.includes(col)) {
-          setEventStatus(`Preview column: C${col + 1}. Click to confirm.`);
+          setEventStatus(
+            pending.confirmRequired
+              ? `Preview column: C${col + 1}. Click to select, then press Confirm.`
+              : `Preview column: C${col + 1}. Click to confirm.`
+          );
         }
         return;
       }
 
       if (pending.mode === "diag") {
         const diag = resolveDiagonalFromIndex(index, pending);
-        if (diag === "main") setEventStatus("Preview main diagonal (red). Click to confirm.");
-        if (diag === "anti") setEventStatus("Preview anti diagonal (blue). Click to confirm.");
+        if (diag === "main") {
+          setEventStatus(
+            pending.confirmRequired
+              ? "Preview main diagonal (red). Click to select, then press Confirm."
+              : "Preview main diagonal (red). Click to confirm."
+          );
+        }
+        if (diag === "anti") {
+          setEventStatus(
+            pending.confirmRequired
+              ? "Preview anti diagonal (blue). Click to select, then press Confirm."
+              : "Preview anti diagonal (blue). Click to confirm."
+          );
+        }
         if (!diag) setEventStatus("Center tile intersects both diagonals. Hover a side diagonal tile to choose.");
         return;
       }
@@ -2357,12 +2715,18 @@
 
     function onCellClick(index) {
       if (roundState.gameOver) return;
+      if (!consumeTapDebounce()) return;
 
       if (eventState.active) {
+        if (eventState.phase !== "select") return;
+        if (isBoardInteractionLocked()) return;
+        lockInput(120);
         handleEventBoardSelectionClick(index);
         return;
       }
 
+      if (isBoardInteractionLocked()) return;
+      lockInput(170);
       placeMark(index);
     }
 
@@ -2380,6 +2744,34 @@
       if (pending.mode === "row") {
         const [row] = indexToRC(index);
         if (!pending.validRows.includes(row)) return;
+
+        if (isMobileLayout() && pending.previewRow !== row) {
+          pending.previewRow = row;
+          setEventStatus(`Preview row: R${row + 1}. Tap again to confirm.`);
+          renderBoard();
+          return;
+        }
+
+        if (pending.confirmRequired) {
+          pending.selectedRow = row;
+          pending.previewRow = row;
+          setEventStatus(`Row R${row + 1} selected. Press Confirm Row Wipe.`);
+          setEventActions([
+            {
+              label: "Confirm Row Wipe",
+              danger: true,
+              onClick: () => {
+                const selected = eventState.pending?.selectedRow;
+                if (selected === null || selected === undefined) return;
+                const changed = wipeRow(selected);
+                resolveEvent(changed ? `Row ${selected + 1} wiped.` : `Row ${selected + 1} could not be changed.`);
+              }
+            }
+          ]);
+          renderBoard();
+          return;
+        }
+
         pending.onPick(row);
         return;
       }
@@ -2387,6 +2779,38 @@
       if (pending.mode === "col") {
         const [, col] = indexToRC(index);
         if (!pending.validCols.includes(col)) return;
+
+        if (isMobileLayout() && pending.previewCol !== col) {
+          pending.previewCol = col;
+          setEventStatus(`Preview column: C${col + 1}. Tap again to confirm.`);
+          renderBoard();
+          return;
+        }
+
+        if (pending.confirmRequired) {
+          pending.selectedCol = col;
+          pending.previewCol = col;
+          setEventStatus(`Column C${col + 1} selected. Press Confirm Column Wipe.`);
+          setEventActions([
+            {
+              label: "Confirm Column Wipe",
+              danger: true,
+              onClick: () => {
+                const selected = eventState.pending?.selectedCol;
+                if (selected === null || selected === undefined) return;
+                const changed = wipeColumn(selected);
+                resolveEvent(
+                  changed
+                    ? `Column ${selected + 1} wiped.`
+                    : `Column ${selected + 1} could not be changed.`
+                );
+              }
+            }
+          ]);
+          renderBoard();
+          return;
+        }
+
         pending.onPick(col);
         return;
       }
@@ -2394,6 +2818,43 @@
       if (pending.mode === "diag") {
         const diag = resolveDiagonalFromIndex(index, pending);
         if (!diag) return;
+
+        if (isMobileLayout() && pending.previewDiag !== diag) {
+          pending.previewDiag = diag;
+          setEventStatus(
+            diag === "main"
+              ? "Preview main diagonal (red). Tap again to confirm."
+              : "Preview anti diagonal (blue). Tap again to confirm."
+          );
+          renderBoard();
+          return;
+        }
+
+        if (pending.confirmRequired) {
+          pending.selectedDiag = diag;
+          pending.previewDiag = diag;
+          setEventStatus(
+            diag === "main"
+              ? "Main diagonal selected. Press Confirm Diagonal Wipe."
+              : "Anti diagonal selected. Press Confirm Diagonal Wipe."
+          );
+          setEventActions([
+            {
+              label: "Confirm Diagonal Wipe",
+              danger: true,
+              onClick: () => {
+                const selected = eventState.pending?.selectedDiag;
+                if (!selected) return;
+                const changed = wipeDiagonal(selected);
+                const label = selected === "main" ? "Main" : "Anti";
+                resolveEvent(changed ? `${label} diagonal wiped.` : `${label} diagonal could not be changed.`);
+              }
+            }
+          ]);
+          renderBoard();
+          return;
+        }
+
         pending.onPick(diag);
         return;
       }
@@ -2426,6 +2887,14 @@
         if (pending.step === "row") {
           const [row] = indexToRC(index);
           if (!pending.validRows.includes(row)) return;
+
+          if (isMobileLayout() && pending.previewRow !== row) {
+            pending.previewRow = row;
+            setEventStatus(`Preview row R${row + 1}. Tap again to choose row.`);
+            renderBoard();
+            return;
+          }
+
           pending.selectedRow = row;
           pending.step = "direction";
           pending.baseStatus = `Row R${row + 1} selected. Choose direction.`;
@@ -2495,8 +2964,15 @@
       const hoverIndex = pending ? pending.hoverIndex : null;
       const hoverRow = hoverIndex === null ? null : indexToRC(hoverIndex)[0];
       const hoverCol = hoverIndex === null ? null : indexToRC(hoverIndex)[1];
-
-      const hoverDiag = pending && pending.mode === "diag" ? pending.hoverDiag : null;
+      const previewRow = pending
+        ? (isMobileLayout() ? pending.previewRow : hoverRow)
+        : null;
+      const previewCol = pending
+        ? (isMobileLayout() ? pending.previewCol : hoverCol)
+        : null;
+      const previewDiag = pending && pending.mode === "diag"
+        ? (isMobileLayout() ? pending.previewDiag : pending.hoverDiag)
+        : null;
 
       for (let i = 0; i < CELL_COUNT; i += 1) {
         const cellEl = ui.board.children[i];
@@ -2518,15 +2994,21 @@
 
           if (pending.mode === "row") {
             if (pending.validRows.includes(row)) cellEl.classList.add("selectable");
-            if (hoverRow !== null && pending.validRows.includes(hoverRow) && row === hoverRow) {
+            if (previewRow !== null && pending.validRows.includes(previewRow) && row === previewRow) {
               cellEl.classList.add("preview-row");
+            }
+            if (pending.selectedRow !== null && pending.selectedRow === row) {
+              cellEl.classList.add("preview-selected");
             }
           }
 
           if (pending.mode === "col") {
             if (pending.validCols.includes(col)) cellEl.classList.add("selectable");
-            if (hoverCol !== null && pending.validCols.includes(hoverCol) && col === hoverCol) {
+            if (previewCol !== null && pending.validCols.includes(previewCol) && col === previewCol) {
               cellEl.classList.add("preview-col");
+            }
+            if (pending.selectedCol !== null && pending.selectedCol === col) {
+              cellEl.classList.add("preview-selected");
             }
           }
 
@@ -2548,12 +3030,19 @@
               cellEl.classList.add("diag-center");
             }
 
-            if ((hoverDiag === "main" || hoverDiag === "both") && onMain && mainValid) {
+            if ((previewDiag === "main" || previewDiag === "both") && onMain && mainValid) {
               cellEl.classList.add("diag-hover-main");
             }
 
-            if ((hoverDiag === "anti" || hoverDiag === "both") && onAnti && antiValid) {
+            if ((previewDiag === "anti" || previewDiag === "both") && onAnti && antiValid) {
               cellEl.classList.add("diag-hover-anti");
+            }
+
+            if (pending.selectedDiag === "main" && onMain && mainValid) {
+              cellEl.classList.add("preview-selected");
+            }
+            if (pending.selectedDiag === "anti" && onAnti && antiValid) {
+              cellEl.classList.add("preview-selected");
             }
           }
 
@@ -2566,7 +3055,7 @@
           if (pending.mode === "rowShift") {
             if (pending.step === "row") {
               if (pending.validRows.includes(row)) cellEl.classList.add("selectable");
-              if (hoverRow !== null && pending.validRows.includes(hoverRow) && row === hoverRow) {
+              if (previewRow !== null && pending.validRows.includes(previewRow) && row === previewRow) {
                 cellEl.classList.add("preview-row");
               }
             }
@@ -2607,17 +3096,18 @@
       });
 
       ui.toSetupFromGameBtn.addEventListener("click", () => {
-        if (eventState.active) return;
+        if (eventState.active || roundState.passBannerActive) return;
         applySetupNames();
         showScreen("setup");
       });
 
       ui.resetScoresBtn.addEventListener("click", () => {
+        if (roundState.passBannerActive) return;
         resetScores();
       });
 
       ui.crtToggleBtn.addEventListener("click", () => {
-        if (eventState.active) return;
+        if (eventState.active || roundState.passBannerActive) return;
         document.body.classList.toggle("crt");
         ui.crtToggleBtn.textContent = document.body.classList.contains("crt") ? "CRT: ON" : "CRT: OFF";
       });
@@ -2625,6 +3115,12 @@
       window.addEventListener("pointerdown", () => {
         initAudio();
       }, { once: true });
+
+      const refreshLayout = () => {
+        updateBoardSizeForViewport();
+      };
+      window.addEventListener("resize", refreshLayout);
+      window.addEventListener("orientationchange", refreshLayout);
     }
 
     function bootstrap() {
@@ -2637,6 +3133,7 @@
       setStatus("Configure names, then start a round.");
       renderHud();
       renderBoard();
+      updateBoardSizeForViewport();
       updateGameControls();
       showScreen("intro");
     }
