@@ -1,0 +1,2647 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pixel Grid: Chaos Five</title>
+  <style>
+    :root {
+      --bg-0: #06060e;
+      --bg-1: #0d1022;
+      --bg-2: #171d3c;
+      --panel: #121632;
+      --panel-2: #0d1025;
+      --grid: #42e6ff;
+      --x: #ff4c94;
+      --o: #73ff5d;
+      --warn: #ffdc6f;
+      --danger: #ff5f5f;
+      --ink: #d8f6ff;
+      --muted: #9ac4d5;
+      --board-size: min(72vmin, 560px);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: "Courier New", Courier, monospace;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 13% 12%, #1e2859 0%, transparent 40%),
+        radial-gradient(circle at 88% 18%, #311f54 0%, transparent 35%),
+        linear-gradient(180deg, var(--bg-2) 0%, var(--bg-1) 50%, var(--bg-0) 100%);
+      overflow: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.18) 0.8px, transparent 0.8px);
+      background-size: 3px 3px;
+      opacity: 0.08;
+      animation: starDrift 12s linear infinite;
+      z-index: 0;
+    }
+
+    body.crt::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.04),
+        rgba(255, 255, 255, 0.04) 2px,
+        rgba(0, 0, 0, 0.08) 2px,
+        rgba(0, 0, 0, 0.08) 4px
+      );
+      mix-blend-mode: screen;
+      opacity: 0.34;
+      z-index: 80;
+      animation: flicker 0.14s steps(2, end) infinite;
+    }
+
+    body.screen-pulse .app {
+      animation: screenPulse 0.38s ease 2;
+    }
+
+    @keyframes starDrift {
+      0% {
+        transform: translateY(0);
+      }
+      100% {
+        transform: translateY(4px);
+      }
+    }
+
+    @keyframes flicker {
+      0% {
+        opacity: 0.3;
+      }
+      50% {
+        opacity: 0.42;
+      }
+      100% {
+        opacity: 0.32;
+      }
+    }
+
+    @keyframes screenPulse {
+      0% {
+        filter: contrast(1) saturate(1);
+        transform: scale(1);
+      }
+      45% {
+        filter: contrast(1.25) saturate(1.2);
+        transform: scale(1.01);
+      }
+      100% {
+        filter: contrast(1) saturate(1);
+        transform: scale(1);
+      }
+    }
+
+    @keyframes popIn {
+      0% {
+        transform: scale(0.2);
+        opacity: 0;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    @keyframes pulseSelect {
+      0% {
+        box-shadow: inset 0 0 0 2px rgba(255, 220, 111, 0.2);
+      }
+      100% {
+        box-shadow: inset 0 0 0 2px rgba(255, 220, 111, 0.6), 0 0 10px rgba(255, 220, 111, 0.25);
+      }
+    }
+
+    @keyframes borderFlash {
+      0% {
+        border-color: #31b5d2;
+      }
+      50% {
+        border-color: var(--warn);
+      }
+      100% {
+        border-color: #31b5d2;
+      }
+    }
+
+    @keyframes cardBlink {
+      0% {
+        box-shadow: 0 0 10px rgba(66, 230, 255, 0.2);
+      }
+      100% {
+        box-shadow: 0 0 22px rgba(255, 220, 111, 0.35);
+      }
+    }
+
+    @keyframes shimmer {
+      0% {
+        transform: translateX(-100%);
+      }
+      100% {
+        transform: translateX(100%);
+      }
+    }
+
+    @keyframes shake {
+      0% {
+        transform: translate(0, 0);
+      }
+      20% {
+        transform: translate(-3px, 2px);
+      }
+      40% {
+        transform: translate(3px, -2px);
+      }
+      60% {
+        transform: translate(-2px, -3px);
+      }
+      80% {
+        transform: translate(2px, 3px);
+      }
+      100% {
+        transform: translate(0, 0);
+      }
+    }
+
+    .app {
+      position: relative;
+      min-height: 100vh;
+      z-index: 1;
+      display: grid;
+      place-items: center;
+      padding: 14px;
+    }
+
+    .screen {
+      display: none;
+      width: min(980px, 96vw);
+      max-height: 96vh;
+      overflow: auto;
+      border: 4px solid var(--grid);
+      background: linear-gradient(180deg, rgba(16, 23, 48, 0.95), rgba(10, 12, 27, 0.95));
+      box-shadow: 0 0 28px rgba(66, 230, 255, 0.3);
+      padding: 18px;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    .title {
+      margin: 0;
+      color: var(--warn);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-shadow: 2px 2px 0 #000;
+      font-size: clamp(20px, 4.1vw, 42px);
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      margin: 8px 0 14px;
+      color: #9be9ff;
+      font-size: clamp(12px, 2.1vw, 18px);
+      text-shadow: 1px 1px 0 #000;
+      line-height: 1.45;
+    }
+
+    .rule-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+      margin: 14px 0;
+    }
+
+    .rule-card {
+      border: 3px solid #276b84;
+      background: linear-gradient(180deg, #151b39, #11152f);
+      padding: 10px;
+    }
+
+    .rule-card h3 {
+      margin: 0 0 6px;
+      color: var(--warn);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    .rule-card p {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--ink);
+    }
+
+    .setup-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .setup-card {
+      border: 3px solid #2b8aa8;
+      background: linear-gradient(180deg, #111836, #0f1330);
+      padding: 10px;
+    }
+
+    .setup-card h3 {
+      margin: 0 0 8px;
+      color: var(--warn);
+      font-size: 14px;
+      text-transform: uppercase;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .field label {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    .field input {
+      border: 2px solid #3f9ebd;
+      background: #0a1026;
+      color: var(--ink);
+      font-family: inherit;
+      font-size: 14px;
+      padding: 8px;
+      outline: none;
+    }
+
+    .setup-preview {
+      border: 3px dashed #5ca0bd;
+      padding: 10px;
+      background: rgba(8, 12, 25, 0.6);
+      min-height: 104px;
+    }
+
+    .setup-preview p {
+      margin: 6px 0;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .screen-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .pixel-btn {
+      appearance: none;
+      border: 3px solid var(--warn);
+      background: #241f45;
+      color: var(--warn);
+      font-family: inherit;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 9px 14px;
+      text-shadow: 1px 1px 0 #000;
+      box-shadow: 0 0 10px rgba(255, 220, 111, 0.26);
+    }
+
+    .pixel-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .pixel-btn:active {
+      transform: translateY(1px);
+    }
+
+    .pixel-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-danger {
+      border-color: var(--danger);
+      color: #ffd2d2;
+      background: #3b1b24;
+      box-shadow: 0 0 10px rgba(255, 95, 95, 0.25);
+    }
+
+    .game-screen {
+      display: none;
+      width: min(1120px, 98vw);
+      max-height: 97vh;
+      gap: 8px;
+      grid-template-rows: auto auto 1fr;
+    }
+
+    .game-screen.active {
+      display: grid;
+    }
+
+    .hud,
+    .sub-hud {
+      border: 3px solid #2c90b2;
+      background: rgba(10, 16, 35, 0.82);
+      padding: 8px 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .hud-text {
+      font-size: 13px;
+      letter-spacing: 0.4px;
+      text-shadow: 1px 1px 0 #000;
+    }
+
+    .scoreboard {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 13px;
+    }
+
+    .mark-x {
+      color: var(--x);
+      font-weight: 700;
+    }
+
+    .mark-o {
+      color: var(--o);
+      font-weight: 700;
+    }
+
+    .arena {
+      display: grid;
+      grid-template-columns: minmax(300px, auto) minmax(250px, 310px);
+      align-items: start;
+      justify-content: center;
+      gap: 12px;
+      padding: 4px;
+      overflow: auto;
+    }
+
+    .board-shell {
+      width: var(--board-size);
+      height: var(--board-size);
+      border: 4px solid var(--grid);
+      background: rgba(8, 11, 23, 0.72);
+      box-shadow: 0 0 24px rgba(66, 230, 255, 0.33);
+      padding: 6px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .board-shell.major-shake {
+      animation: shake 0.24s linear;
+    }
+
+    .board-shell.alert-glow {
+      box-shadow: 0 0 35px rgba(255, 220, 111, 0.45), 0 0 16px rgba(255, 108, 108, 0.25);
+    }
+
+    .board-shell.alert-shimmer::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(
+        110deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.06) 45%,
+        rgba(255, 220, 111, 0.22) 50%,
+        rgba(255, 255, 255, 0.06) 55%,
+        transparent 100%
+      );
+      animation: shimmer 0.45s linear 2;
+    }
+
+    .board-shell.selection-glow {
+      box-shadow: 0 0 26px rgba(255, 220, 111, 0.36), 0 0 18px rgba(66, 230, 255, 0.3);
+    }
+
+    .board {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      grid-template-rows: repeat(5, 1fr);
+      gap: 4px;
+      background: #0b0f23;
+      border: 3px solid #205675;
+      padding: 4px;
+    }
+
+    .cell {
+      border: 3px solid #1f3e66;
+      background: linear-gradient(180deg, #171b3a, #10132b);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      position: relative;
+      image-rendering: pixelated;
+      overflow: hidden;
+      transition: border-color 0.12s linear, box-shadow 0.12s linear, background 0.12s linear;
+    }
+
+    .cell.blocked {
+      background: #352427;
+      border-color: #6f3434;
+      cursor: not-allowed;
+    }
+
+    .cell.locked {
+      box-shadow: inset 0 0 0 2px #bd8d3f;
+    }
+
+    .cell.shielded::after {
+      content: "S";
+      position: absolute;
+      right: 4px;
+      top: 2px;
+      font-size: 11px;
+      color: #9cf8ff;
+      text-shadow: 1px 1px 0 #000;
+    }
+
+    .cell.frozen {
+      box-shadow: inset 0 0 0 2px #678cff;
+    }
+
+    .board.selection-mode .cell {
+      cursor: not-allowed;
+    }
+
+    .board.selection-mode .cell.selectable {
+      cursor: crosshair;
+      animation: pulseSelect 0.65s steps(2, end) infinite alternate;
+    }
+
+    .cell.preview-row,
+    .cell.preview-col {
+      border-color: #ffd56f;
+      box-shadow: inset 0 0 0 2px rgba(255, 213, 111, 0.4);
+    }
+
+    .cell.preview-selected {
+      border-color: #ffab5a;
+      box-shadow: inset 0 0 0 2px rgba(255, 171, 90, 0.55);
+    }
+
+    .cell.diag-main {
+      border-color: #ff5d7e;
+      box-shadow: inset 0 0 0 2px rgba(255, 93, 126, 0.24);
+    }
+
+    .cell.diag-anti {
+      border-color: #5d9cff;
+      box-shadow: inset 0 0 0 2px rgba(93, 156, 255, 0.24);
+    }
+
+    .cell.diag-center {
+      border-color: #ffffff;
+      box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.45);
+    }
+
+    .cell.diag-hover-main {
+      box-shadow: 0 0 12px rgba(255, 93, 126, 0.5), inset 0 0 0 2px rgba(255, 93, 126, 0.48);
+    }
+
+    .cell.diag-hover-anti {
+      box-shadow: 0 0 12px rgba(93, 156, 255, 0.5), inset 0 0 0 2px rgba(93, 156, 255, 0.45);
+    }
+
+    .mark {
+      width: 72%;
+      aspect-ratio: 1 / 1;
+      position: relative;
+      transform: scale(0.2);
+      opacity: 0;
+      animation: popIn 130ms steps(3, end) forwards;
+      filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.18));
+    }
+
+    .mark.x::before,
+    .mark.x::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 88%;
+      height: 18%;
+      background: var(--x);
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+      transform-origin: center;
+    }
+
+    .mark.x::before {
+      transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    .mark.x::after {
+      transform: translate(-50%, -50%) rotate(-45deg);
+    }
+
+    .mark.o {
+      border: 12px solid var(--o);
+      border-radius: 4px;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+    }
+
+    .event-panel {
+      border: 4px solid #2c90b2;
+      background: linear-gradient(180deg, rgba(14, 18, 42, 0.95), rgba(9, 12, 27, 0.95));
+      min-height: var(--board-size);
+      padding: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .event-panel-head {
+      border: 2px solid #246b89;
+      background: #0f1530;
+      color: #9defff;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 0.8px;
+      padding: 6px 8px;
+      margin-bottom: 8px;
+      text-shadow: 1px 1px 0 #000;
+    }
+
+    .event-idle {
+      margin: 8px 0;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+      border: 2px dashed #2e6f8c;
+      padding: 10px;
+      background: rgba(10, 14, 30, 0.64);
+      text-shadow: 1px 1px 0 #000;
+    }
+
+    .event-card {
+      border: 3px solid #31b5d2;
+      background: linear-gradient(180deg, #1a1f46, #111633);
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+      transform: translateX(120%);
+      opacity: 0;
+      transition: transform 220ms steps(4, end), opacity 140ms linear;
+      pointer-events: none;
+    }
+
+    .event-panel.active .event-card {
+      transform: translateX(0);
+      opacity: 1;
+      pointer-events: auto;
+      animation: borderFlash 0.45s steps(2, end) infinite, cardBlink 0.6s steps(2, end) infinite alternate;
+    }
+
+    .event-panel.active {
+      border-color: var(--warn);
+      box-shadow: 0 0 18px rgba(255, 220, 111, 0.34);
+    }
+
+    .event-kicker {
+      margin: 0;
+      color: #ffb481;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.9px;
+    }
+
+    .event-name {
+      margin: 0;
+      color: var(--warn);
+      text-transform: uppercase;
+      text-shadow: 1px 1px 0 #000;
+      font-size: 21px;
+      line-height: 1.2;
+    }
+
+    .event-desc,
+    .event-trigger,
+    .event-helper,
+    .event-status {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--ink);
+      text-shadow: 1px 1px 0 #000;
+    }
+
+    .event-helper {
+      border: 2px solid #2c8aa7;
+      padding: 8px;
+      background: rgba(8, 12, 27, 0.72);
+      color: #a6ecff;
+    }
+
+    .event-status {
+      color: #ffe3a6;
+      min-height: 20px;
+    }
+
+    .event-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .event-actions .pixel-btn {
+      font-size: 12px;
+      padding: 7px 10px;
+    }
+
+    @media (max-width: 1000px) {
+      :root {
+        --board-size: min(74vmin, 500px);
+      }
+
+      .arena {
+        grid-template-columns: 1fr;
+      }
+
+      .event-panel {
+        min-height: 250px;
+      }
+    }
+
+    @media (max-width: 760px) {
+      :root {
+        --board-size: min(80vmin, 430px);
+      }
+
+      .event-name {
+        font-size: 18px;
+      }
+    }
+  </style>
+</head>
+<body class="crt">
+  <main class="app">
+    <section id="introScreen" class="screen active" aria-label="Game introduction">
+      <h1 class="title">Pixel Grid: Chaos Five</h1>
+      <p class="subtitle">8-bit tactical board chaos on a 5x5 battlefield.</p>
+      <div class="rule-grid">
+        <article class="rule-card">
+          <h3>Objective</h3>
+          <p>Build five-in-a-row horizontally, vertically, or diagonally to win instantly.</p>
+        </article>
+        <article class="rule-card">
+          <h3>Hidden Events</h3>
+          <p>After the first move from each player, five hidden chaos events are armed on empty cells.</p>
+        </article>
+        <article class="rule-card">
+          <h3>Trigger Behavior</h3>
+          <p>Landing on a hidden event tile launches an immediate chaos effect and selection mode.</p>
+        </article>
+        <article class="rule-card">
+          <h3>End-Game Scoring</h3>
+          <p>If no five-in-a-row exists when no moves remain, the longest connected chain wins.</p>
+        </article>
+      </div>
+      <div class="screen-actions">
+        <button id="toSetupBtn" class="pixel-btn" type="button">Continue Setup</button>
+      </div>
+    </section>
+
+    <section id="setupScreen" class="screen" aria-label="Player setup">
+      <h2 class="title">Match Setup</h2>
+      <p class="subtitle">Set player names, then launch the round. Marks are fixed: Player 1 = X, Player 2 = O.</p>
+      <div class="setup-grid">
+        <div class="setup-card">
+          <h3>Players</h3>
+          <div class="field">
+            <label for="p1Name">Player 1 Name (X)</label>
+            <input id="p1Name" maxlength="20" value="Player 1" />
+          </div>
+          <div class="field">
+            <label for="p2Name">Player 2 Name (O)</label>
+            <input id="p2Name" maxlength="20" value="Player 2" />
+          </div>
+        </div>
+
+        <div class="setup-card">
+          <h3>Round Preview</h3>
+          <div id="setupPreview" class="setup-preview"></div>
+        </div>
+      </div>
+      <div class="screen-actions">
+        <button id="backToIntroBtn" class="pixel-btn" type="button">Back</button>
+        <button id="startRoundBtn" class="pixel-btn" type="button">Start Round</button>
+      </div>
+    </section>
+
+    <section id="gameScreen" class="game-screen" aria-label="Gameplay board">
+      <div class="hud">
+        <div id="turnText" class="hud-text">Turn:</div>
+        <div id="statusText" class="hud-text">Status:</div>
+        <div id="scoreText" class="scoreboard"></div>
+      </div>
+
+      <div class="sub-hud">
+        <div id="roundText" class="hud-text">Round 1</div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button id="nextRoundBtn" class="pixel-btn" type="button" disabled>Next Round</button>
+          <button id="toSetupFromGameBtn" class="pixel-btn" type="button">Setup</button>
+          <button id="resetScoresBtn" class="pixel-btn" type="button">Reset Scores</button>
+          <button id="crtToggleBtn" class="pixel-btn" type="button">CRT: ON</button>
+        </div>
+      </div>
+
+      <div class="arena">
+        <div id="boardShell" class="board-shell">
+          <div id="board" class="board"></div>
+        </div>
+
+        <aside id="eventPanel" class="event-panel" aria-live="polite">
+          <div class="event-panel-head">Chaos Console</div>
+          <p id="eventIdle" class="event-idle">No active event. Place marks and watch for hidden chaos triggers.</p>
+          <div id="eventCard" class="event-card">
+            <p id="eventKicker" class="event-kicker">Chaos Event Triggered</p>
+            <h3 id="eventName" class="event-name">Event</h3>
+            <p id="eventDesc" class="event-desc"></p>
+            <p id="eventTrigger" class="event-trigger"></p>
+            <p id="eventHelper" class="event-helper"></p>
+            <p id="eventStatus" class="event-status"></p>
+            <div id="eventActions" class="event-actions"></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const SIZE = 5;
+    const CELL_COUNT = SIZE * SIZE;
+
+    const EVENT_TYPES = [
+      "ERASE_OPPONENT",
+      "SWAP_TILES",
+      "ERASE_ROW",
+      "ERASE_COLUMN",
+      "EXTRA_TURN",
+      "DIAGONAL_WIPE",
+      "LOCK_TILE",
+      "SHIELD_TILE",
+      "MIRROR_MOVE",
+      "CONVERT_ADJACENT",
+      "FREEZE_ROW",
+      "DOUBLE_PLACEMENT",
+      "BLOCK_EMPTY",
+      "LINE_BOOST",
+      "ROW_SHIFT"
+    ];
+
+    const EVENT_META = {
+      ERASE_OPPONENT: {
+        name: "Tile Erase",
+        description: "Erase one opponent tile of your choice.",
+        impact: "normal"
+      },
+      SWAP_TILES: {
+        name: "Polarity Swap",
+        description: "Swap one of your tiles with one opponent tile.",
+        impact: "normal"
+      },
+      ERASE_ROW: {
+        name: "Row Obliteration",
+        description: "Erase one entire row.",
+        impact: "high"
+      },
+      ERASE_COLUMN: {
+        name: "Column Obliteration",
+        description: "Erase one entire column.",
+        impact: "high"
+      },
+      EXTRA_TURN: {
+        name: "Time Glitch",
+        description: "Gain an immediate extra turn.",
+        impact: "normal"
+      },
+      DIAGONAL_WIPE: {
+        name: "Diagonal Purge",
+        description: "Choose one diagonal to clear.",
+        impact: "high"
+      },
+      LOCK_TILE: {
+        name: "Data Lock",
+        description: "Lock one tile permanently so it cannot be altered.",
+        impact: "normal"
+      },
+      SHIELD_TILE: {
+        name: "Shield Matrix",
+        description: "Shield one owned tile from next erase or swap.",
+        impact: "normal"
+      },
+      MIRROR_MOVE: {
+        name: "Mirror Directive",
+        description: "Opponent's next move must mirror your last move across center.",
+        impact: "normal"
+      },
+      CONVERT_ADJACENT: {
+        name: "Assimilation",
+        description: "Convert one orthogonally adjacent opponent tile.",
+        impact: "normal"
+      },
+      FREEZE_ROW: {
+        name: "Cryo Row",
+        description: "Freeze one row for two turns. Events cannot affect it.",
+        impact: "normal"
+      },
+      DOUBLE_PLACEMENT: {
+        name: "Double Drop",
+        description: "Place two marks this turn.",
+        impact: "normal"
+      },
+      BLOCK_EMPTY: {
+        name: "Void Block",
+        description: "Block one empty cell permanently.",
+        impact: "normal"
+      },
+      LINE_BOOST: {
+        name: "Line Boost",
+        description: "Auto-place at an open end of one of your lines.",
+        impact: "normal"
+      },
+      ROW_SHIFT: {
+        name: "Row Shift",
+        description: "Shift a row left or right. Edge tile disappears.",
+        impact: "high"
+      }
+    };
+
+    const ui = {
+      introScreen: document.getElementById("introScreen"),
+      setupScreen: document.getElementById("setupScreen"),
+      gameScreen: document.getElementById("gameScreen"),
+      toSetupBtn: document.getElementById("toSetupBtn"),
+      backToIntroBtn: document.getElementById("backToIntroBtn"),
+      startRoundBtn: document.getElementById("startRoundBtn"),
+      p1NameInput: document.getElementById("p1Name"),
+      p2NameInput: document.getElementById("p2Name"),
+      setupPreview: document.getElementById("setupPreview"),
+      turnText: document.getElementById("turnText"),
+      statusText: document.getElementById("statusText"),
+      scoreText: document.getElementById("scoreText"),
+      roundText: document.getElementById("roundText"),
+      nextRoundBtn: document.getElementById("nextRoundBtn"),
+      toSetupFromGameBtn: document.getElementById("toSetupFromGameBtn"),
+      resetScoresBtn: document.getElementById("resetScoresBtn"),
+      crtToggleBtn: document.getElementById("crtToggleBtn"),
+      boardShell: document.getElementById("boardShell"),
+      board: document.getElementById("board"),
+      eventPanel: document.getElementById("eventPanel"),
+      eventCard: document.getElementById("eventCard"),
+      eventIdle: document.getElementById("eventIdle"),
+      eventKicker: document.getElementById("eventKicker"),
+      eventName: document.getElementById("eventName"),
+      eventDesc: document.getElementById("eventDesc"),
+      eventTrigger: document.getElementById("eventTrigger"),
+      eventHelper: document.getElementById("eventHelper"),
+      eventStatus: document.getElementById("eventStatus"),
+      eventActions: document.getElementById("eventActions")
+    };
+
+    const boardState = {
+      cells: []
+    };
+
+    const playerState = {
+      players: {
+        p1: { id: "p1", name: "Player 1", mark: "X", wins: 0 },
+        p2: { id: "p2", name: "Player 2", mark: "O", wins: 0 }
+      },
+      currentPlayerId: "p1"
+    };
+
+    const eventState = {
+      assigned: false,
+      hiddenByCell: new Map(),
+      active: false,
+      phase: "idle",
+      currentType: null,
+      triggerPlayerId: null,
+      pending: null,
+      alertTimer: null
+    };
+
+    const roundState = {
+      roundNumber: 1,
+      starterId: "p1",
+      nextStarterId: "p1",
+      gameOver: false,
+      winnerId: null,
+      placementsRemaining: 1,
+      extraTurnPending: false,
+      mirrorConstraint: null,
+      freezeRows: new Map(),
+      playersWhoPlaced: new Set(),
+      lastPlacementIndex: null
+    };
+
+    const audioState = {
+      ctx: null,
+      ready: false
+    };
+
+    function createCell() {
+      return {
+        mark: null,
+        blocked: false,
+        locked: false,
+        shield: false
+      };
+    }
+
+    function otherPlayerId(id) {
+      return id === "p1" ? "p2" : "p1";
+    }
+
+    function currentPlayer() {
+      return playerState.players[playerState.currentPlayerId];
+    }
+
+    function otherPlayer() {
+      return playerState.players[otherPlayerId(playerState.currentPlayerId)];
+    }
+
+    function indexToRC(index) {
+      return [Math.floor(index / SIZE), index % SIZE];
+    }
+
+    function rcToIndex(row, col) {
+      return row * SIZE + col;
+    }
+
+    function coordLabel(index) {
+      const [row, col] = indexToRC(index);
+      return `R${row + 1} C${col + 1}`;
+    }
+
+    function shuffle(list) {
+      const arr = list.slice();
+      for (let i = arr.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function showScreen(which) {
+      ui.introScreen.classList.remove("active");
+      ui.setupScreen.classList.remove("active");
+      ui.gameScreen.classList.remove("active");
+      if (which === "intro") ui.introScreen.classList.add("active");
+      if (which === "setup") ui.setupScreen.classList.add("active");
+      if (which === "game") ui.gameScreen.classList.add("active");
+    }
+
+    function escapeHtml(text) {
+      return text
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function initAudio() {
+      if (audioState.ready) return;
+      try {
+        audioState.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        audioState.ready = true;
+      } catch {
+        audioState.ready = false;
+      }
+    }
+
+    function playTone(freq, duration, type, volume = 0.08, delay = 0) {
+      if (!audioState.ready || !audioState.ctx) return;
+      const ctx = audioState.ctx;
+      const when = ctx.currentTime + delay;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, when);
+      gain.gain.setValueAtTime(volume, when);
+      gain.gain.exponentialRampToValueAtTime(0.0001, when + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(when);
+      osc.stop(when + duration);
+    }
+
+    function playSfx(kind) {
+      if (!audioState.ready) return;
+      if (kind === "place") {
+        playTone(220, 0.06, "square", 0.06);
+        playTone(300, 0.05, "square", 0.05, 0.035);
+      } else if (kind === "event") {
+        playTone(140, 0.07, "triangle", 0.07);
+        playTone(250, 0.08, "triangle", 0.06, 0.07);
+      } else if (kind === "erase") {
+        playTone(180, 0.05, "sawtooth", 0.05);
+        playTone(115, 0.06, "sawtooth", 0.04, 0.035);
+      } else if (kind === "alarm") {
+        playTone(170, 0.22, "sawtooth", 0.085);
+        playTone(240, 0.22, "sawtooth", 0.08, 0.23);
+        playTone(170, 0.22, "sawtooth", 0.085, 0.46);
+      } else if (kind === "win") {
+        playTone(260, 0.08, "square", 0.08);
+        playTone(330, 0.09, "square", 0.08, 0.08);
+        playTone(420, 0.12, "square", 0.08, 0.18);
+      }
+    }
+
+    function majorShake() {
+      ui.boardShell.classList.remove("major-shake");
+      void ui.boardShell.offsetWidth;
+      ui.boardShell.classList.add("major-shake");
+    }
+
+    function buildBoardUi() {
+      ui.board.innerHTML = "";
+      for (let i = 0; i < CELL_COUNT; i += 1) {
+        const cell = document.createElement("button");
+        cell.type = "button";
+        cell.className = "cell";
+        cell.dataset.index = String(i);
+        cell.addEventListener("mouseenter", () => onCellHover(i));
+        cell.addEventListener("mouseleave", () => onCellHover(null));
+        cell.addEventListener("click", () => onCellClick(i));
+        ui.board.appendChild(cell);
+      }
+    }
+
+    function applySetupNames() {
+      playerState.players.p1.name = ui.p1NameInput.value.trim() || "Player 1";
+      playerState.players.p2.name = ui.p2NameInput.value.trim() || "Player 2";
+      updateSetupPreview();
+      renderHud();
+    }
+
+    function updateSetupPreview() {
+      const starter = playerState.players[roundState.nextStarterId];
+      const nextStarter = playerState.players[otherPlayerId(roundState.nextStarterId)];
+      ui.setupPreview.innerHTML = "";
+
+      const lines = [
+        `Round ${roundState.roundNumber}: ${starter.name} starts first.`,
+        "Player 1 always uses X. Player 2 always uses O.",
+        `Next round starter auto-switches to ${nextStarter.name}.`,
+        "Scoreboard persists across rounds."
+      ];
+
+      for (const line of lines) {
+        const p = document.createElement("p");
+        p.textContent = line;
+        ui.setupPreview.appendChild(p);
+      }
+    }
+
+    function setStatus(message) {
+      ui.statusText.textContent = `Status: ${message}`;
+    }
+
+    function renderHud() {
+      const current = currentPlayer();
+      ui.turnText.textContent = `Turn: ${current.name} (${current.mark})`;
+      ui.turnText.style.color = current.mark === "X" ? "var(--x)" : "var(--o)";
+
+      const starterName = playerState.players[roundState.starterId]?.name || playerState.players[roundState.nextStarterId].name;
+      ui.roundText.textContent = `Round ${roundState.roundNumber} | Starter: ${starterName}`;
+
+      const p1 = playerState.players.p1;
+      const p2 = playerState.players.p2;
+      ui.scoreText.innerHTML = [
+        `<span>${escapeHtml(p1.name)} <span class="mark-x">(${p1.mark})</span>: <strong>${p1.wins}</strong></span>`,
+        `<span>${escapeHtml(p2.name)} <span class="mark-o">(${p2.mark})</span>: <strong>${p2.wins}</strong></span>`
+      ].join("");
+    }
+
+    function updateGameControls() {
+      const lock = eventState.active;
+      ui.nextRoundBtn.disabled = lock || !roundState.gameOver;
+      ui.toSetupFromGameBtn.disabled = lock;
+      ui.resetScoresBtn.disabled = lock;
+      ui.crtToggleBtn.disabled = lock;
+    }
+
+    function showEventPanel(eventType, triggerPlayerId) {
+      const meta = EVENT_META[eventType];
+      const triggerPlayer = playerState.players[triggerPlayerId];
+
+      ui.eventKicker.textContent = "Chaos Event Triggered";
+      ui.eventName.textContent = meta.name;
+      ui.eventDesc.textContent = meta.description;
+      ui.eventTrigger.textContent = `Triggered by ${triggerPlayer.name} (${triggerPlayer.mark}).`;
+      ui.eventHelper.textContent = "Danger signal in progress.";
+      ui.eventStatus.textContent = "Initializing...";
+      ui.eventActions.innerHTML = "";
+
+      ui.eventIdle.hidden = true;
+      ui.eventPanel.classList.add("active");
+    }
+
+    function hideEventPanel() {
+      ui.eventPanel.classList.remove("active");
+      ui.eventIdle.hidden = false;
+      ui.eventActions.innerHTML = "";
+      ui.eventStatus.textContent = "";
+      ui.eventHelper.textContent = "";
+    }
+
+    function setEventHelper(text) {
+      ui.eventHelper.textContent = text;
+    }
+
+    function setEventStatus(text) {
+      ui.eventStatus.textContent = text;
+    }
+
+    function setEventActions(actions) {
+      ui.eventActions.innerHTML = "";
+      actions.forEach((action) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = action.danger ? "pixel-btn btn-danger" : "pixel-btn";
+        btn.textContent = action.label;
+        btn.disabled = Boolean(action.disabled);
+        btn.addEventListener("click", () => {
+          if (btn.disabled || !eventState.active) return;
+          action.onClick();
+        });
+        ui.eventActions.appendChild(btn);
+      });
+    }
+
+    function clearEventActions() {
+      ui.eventActions.innerHTML = "";
+    }
+
+    function resetBoardStateForRound() {
+      boardState.cells = Array.from({ length: CELL_COUNT }, createCell);
+    }
+
+    function resetEventStateForRound() {
+      clearTimeout(eventState.alertTimer);
+      eventState.alertTimer = null;
+      eventState.assigned = false;
+      eventState.hiddenByCell = new Map();
+      eventState.active = false;
+      eventState.phase = "idle";
+      eventState.currentType = null;
+      eventState.triggerPlayerId = null;
+      eventState.pending = null;
+
+      document.body.classList.remove("screen-pulse");
+      ui.board.classList.remove("selection-mode");
+      ui.boardShell.classList.remove("alert-glow", "alert-shimmer", "selection-glow");
+      hideEventPanel();
+    }
+
+    function resetRoundRuntime() {
+      roundState.gameOver = false;
+      roundState.winnerId = null;
+      roundState.placementsRemaining = 1;
+      roundState.extraTurnPending = false;
+      roundState.mirrorConstraint = null;
+      roundState.freezeRows = new Map();
+      roundState.playersWhoPlaced = new Set();
+      roundState.lastPlacementIndex = null;
+    }
+
+    function startRoundFromSetup() {
+      applySetupNames();
+      initAudio();
+
+      roundState.starterId = roundState.nextStarterId;
+      roundState.nextStarterId = otherPlayerId(roundState.starterId);
+      playerState.currentPlayerId = roundState.starterId;
+
+      resetBoardStateForRound();
+      resetEventStateForRound();
+      resetRoundRuntime();
+
+      setStatus(`${currentPlayer().name} opens the round.`);
+      showScreen("game");
+      renderHud();
+      renderBoard();
+      updateGameControls();
+      updateSetupPreview();
+    }
+
+    function startNextRound() {
+      if (!roundState.gameOver || eventState.active) return;
+      roundState.roundNumber += 1;
+      startRoundFromSetup();
+    }
+
+    function resetScores() {
+      if (eventState.active) return;
+      playerState.players.p1.wins = 0;
+      playerState.players.p2.wins = 0;
+      roundState.roundNumber = 1;
+      roundState.nextStarterId = "p1";
+      setStatus("Scores reset. Configure names and start a new round.");
+      updateSetupPreview();
+      renderHud();
+      showScreen("setup");
+    }
+
+    function isCellPlaceable(index) {
+      const cell = boardState.cells[index];
+      return Boolean(cell) && !cell.mark && !cell.blocked && !cell.locked;
+    }
+
+    function isRowFrozen(row) {
+      return roundState.freezeRows.has(row);
+    }
+
+    function isIndexFrozen(index) {
+      const [row] = indexToRC(index);
+      return isRowFrozen(row);
+    }
+
+    function cellAffectState(index, kind) {
+      const cell = boardState.cells[index];
+      if (!cell) return false;
+      if (isIndexFrozen(index)) return false;
+      if (cell.locked) return false;
+      if ((kind === "erase" || kind === "swap") && cell.shield) return "shield";
+      return true;
+    }
+
+    function consumeShield(index) {
+      boardState.cells[index].shield = false;
+      playSfx("event");
+      setStatus(`Shield absorbed impact at ${coordLabel(index)}.`);
+    }
+
+    function eraseCell(index) {
+      const cell = boardState.cells[index];
+      if (!cell || !cell.mark) return false;
+      const affect = cellAffectState(index, "erase");
+      if (affect === "shield") {
+        consumeShield(index);
+        return false;
+      }
+      if (affect !== true) return false;
+      cell.mark = null;
+      playSfx("erase");
+      return true;
+    }
+
+    function swapCells(indexA, indexB) {
+      const a = boardState.cells[indexA];
+      const b = boardState.cells[indexB];
+      if (!a?.mark || !b?.mark) return false;
+
+      const affectA = cellAffectState(indexA, "swap");
+      const affectB = cellAffectState(indexB, "swap");
+
+      if (affectA === "shield") {
+        consumeShield(indexA);
+        return false;
+      }
+      if (affectB === "shield") {
+        consumeShield(indexB);
+        return false;
+      }
+      if (affectA !== true || affectB !== true) return false;
+
+      [a.mark, b.mark] = [b.mark, a.mark];
+      playSfx("event");
+      return true;
+    }
+
+    function wipeRow(row) {
+      let changed = false;
+      for (let col = 0; col < SIZE; col += 1) {
+        changed = eraseCell(rcToIndex(row, col)) || changed;
+      }
+      if (changed) {
+        majorShake();
+      }
+      return changed;
+    }
+
+    function wipeColumn(col) {
+      let changed = false;
+      for (let row = 0; row < SIZE; row += 1) {
+        changed = eraseCell(rcToIndex(row, col)) || changed;
+      }
+      if (changed) {
+        majorShake();
+      }
+      return changed;
+    }
+
+    function wipeDiagonal(kind) {
+      let changed = false;
+      for (let i = 0; i < SIZE; i += 1) {
+        const index = kind === "main" ? rcToIndex(i, i) : rcToIndex(i, SIZE - 1 - i);
+        changed = eraseCell(index) || changed;
+      }
+      if (changed) {
+        majorShake();
+      }
+      return changed;
+    }
+
+    function shiftRow(row, direction) {
+      const marks = [];
+      for (let col = 0; col < SIZE; col += 1) {
+        marks.push(boardState.cells[rcToIndex(row, col)].mark);
+      }
+
+      const nextMarks = Array(SIZE).fill(null);
+
+      for (let col = 0; col < SIZE; col += 1) {
+        const index = rcToIndex(row, col);
+        if (boardState.cells[index].locked && marks[col]) {
+          nextMarks[col] = marks[col];
+        }
+      }
+
+      if (direction === -1) {
+        for (let col = 1; col < SIZE; col += 1) {
+          if (!marks[col]) continue;
+          const from = rcToIndex(row, col);
+          if (boardState.cells[from].locked) continue;
+          const targetCol = col - 1;
+          const target = rcToIndex(row, targetCol);
+          if (boardState.cells[target].blocked || boardState.cells[target].locked || nextMarks[targetCol]) {
+            if (!nextMarks[col]) nextMarks[col] = marks[col];
+          } else {
+            nextMarks[targetCol] = marks[col];
+          }
+        }
+      } else {
+        for (let col = SIZE - 2; col >= 0; col -= 1) {
+          if (!marks[col]) continue;
+          const from = rcToIndex(row, col);
+          if (boardState.cells[from].locked) continue;
+          const targetCol = col + 1;
+          const target = rcToIndex(row, targetCol);
+          if (boardState.cells[target].blocked || boardState.cells[target].locked || nextMarks[targetCol]) {
+            if (!nextMarks[col]) nextMarks[col] = marks[col];
+          } else {
+            nextMarks[targetCol] = marks[col];
+          }
+        }
+      }
+
+      for (let col = 0; col < SIZE; col += 1) {
+        boardState.cells[rcToIndex(row, col)].mark = nextMarks[col];
+      }
+
+      majorShake();
+      playSfx("event");
+      return true;
+    }
+
+    function boardHasPlayableCell() {
+      for (let i = 0; i < CELL_COUNT; i += 1) {
+        if (isCellPlaceable(i)) return true;
+      }
+      return false;
+    }
+
+    function detectFiveInRowWinnerMark() {
+      for (let row = 0; row < SIZE; row += 1) {
+        const first = boardState.cells[rcToIndex(row, 0)].mark;
+        if (first && [1, 2, 3, 4].every((col) => boardState.cells[rcToIndex(row, col)].mark === first)) {
+          return first;
+        }
+      }
+
+      for (let col = 0; col < SIZE; col += 1) {
+        const first = boardState.cells[rcToIndex(0, col)].mark;
+        if (first && [1, 2, 3, 4].every((row) => boardState.cells[rcToIndex(row, col)].mark === first)) {
+          return first;
+        }
+      }
+
+      const main = boardState.cells[rcToIndex(0, 0)].mark;
+      if (main && [1, 2, 3, 4].every((i) => boardState.cells[rcToIndex(i, i)].mark === main)) {
+        return main;
+      }
+
+      const anti = boardState.cells[rcToIndex(0, 4)].mark;
+      if (anti && [1, 2, 3, 4].every((i) => boardState.cells[rcToIndex(i, 4 - i)].mark === anti)) {
+        return anti;
+      }
+
+      return null;
+    }
+
+    function longestChain(mark) {
+      const dirs = [
+        [0, 1],
+        [1, 0],
+        [1, 1],
+        [1, -1]
+      ];
+
+      let best = 0;
+
+      for (let row = 0; row < SIZE; row += 1) {
+        for (let col = 0; col < SIZE; col += 1) {
+          if (boardState.cells[rcToIndex(row, col)].mark !== mark) continue;
+
+          for (const [dr, dc] of dirs) {
+            const prevRow = row - dr;
+            const prevCol = col - dc;
+            if (
+              prevRow >= 0 &&
+              prevRow < SIZE &&
+              prevCol >= 0 &&
+              prevCol < SIZE &&
+              boardState.cells[rcToIndex(prevRow, prevCol)].mark === mark
+            ) {
+              continue;
+            }
+
+            let len = 0;
+            let r = row;
+            let c = col;
+            while (
+              r >= 0 &&
+              r < SIZE &&
+              c >= 0 &&
+              c < SIZE &&
+              boardState.cells[rcToIndex(r, c)].mark === mark
+            ) {
+              len += 1;
+              r += dr;
+              c += dc;
+            }
+
+            if (len > best) best = len;
+          }
+        }
+      }
+
+      return best;
+    }
+
+    function getPlayerIdByMark(mark) {
+      if (playerState.players.p1.mark === mark) return "p1";
+      if (playerState.players.p2.mark === mark) return "p2";
+      return null;
+    }
+
+    function evaluateBoardForEnd(reasonContext = "") {
+      const winnerMark = detectFiveInRowWinnerMark();
+      if (winnerMark) {
+        const winnerId = getPlayerIdByMark(winnerMark);
+        endRound(winnerId, `${playerState.players[winnerId].name} completed five-in-a-row.`);
+        return true;
+      }
+
+      if (!boardHasPlayableCell()) {
+        const p1Len = longestChain(playerState.players.p1.mark);
+        const p2Len = longestChain(playerState.players.p2.mark);
+        if (p1Len > p2Len) {
+          endRound("p1", `Board sealed. Longest chain ${p1Len} vs ${p2Len}.`);
+        } else if (p2Len > p1Len) {
+          endRound("p2", `Board sealed. Longest chain ${p2Len} vs ${p1Len}.`);
+        } else {
+          endRound(null, `Board sealed. Equal longest chain ${p1Len}.`);
+        }
+        return true;
+      }
+
+      if (reasonContext) {
+        setStatus(reasonContext);
+      }
+      return false;
+    }
+
+    function endRound(winnerId, reason) {
+      roundState.gameOver = true;
+      roundState.winnerId = winnerId;
+
+      if (winnerId) {
+        playerState.players[winnerId].wins += 1;
+        setStatus(`${playerState.players[winnerId].name} wins Round ${roundState.roundNumber}. ${reason}`);
+      } else {
+        setStatus(`Round ${roundState.roundNumber} is a draw. ${reason}`);
+      }
+
+      playSfx("win");
+
+      teardownEventState();
+      renderHud();
+      renderBoard();
+      updateGameControls();
+    }
+
+    function stepFreezeRows() {
+      for (const [row, turns] of [...roundState.freezeRows.entries()]) {
+        if (turns <= 1) {
+          roundState.freezeRows.delete(row);
+        } else {
+          roundState.freezeRows.set(row, turns - 1);
+        }
+      }
+    }
+
+    function mirroredIndex(index) {
+      const [row, col] = indexToRC(index);
+      return rcToIndex(SIZE - 1 - row, SIZE - 1 - col);
+    }
+
+    function enforceMirrorConstraint() {
+      const mirror = roundState.mirrorConstraint;
+      if (!mirror || mirror.targetPlayerId !== playerState.currentPlayerId) return;
+      if (!isCellPlaceable(mirror.targetIndex)) {
+        roundState.mirrorConstraint = null;
+        setStatus("Mirror move expired. Mirrored tile became unavailable.");
+      }
+    }
+
+    function finalizeTurnCycle() {
+      roundState.placementsRemaining -= 1;
+
+      if (roundState.placementsRemaining > 0) {
+        setStatus(`${currentPlayer().name} has one more placement this turn.`);
+        renderHud();
+        renderBoard();
+        return;
+      }
+
+      roundState.placementsRemaining = 1;
+      stepFreezeRows();
+
+      if (roundState.extraTurnPending) {
+        roundState.extraTurnPending = false;
+        setStatus(`${currentPlayer().name} keeps the turn from Time Glitch.`);
+      } else {
+        playerState.currentPlayerId = otherPlayerId(playerState.currentPlayerId);
+        setStatus(`${currentPlayer().name}'s turn.`);
+      }
+
+      enforceMirrorConstraint();
+      renderHud();
+      renderBoard();
+    }
+
+    function assignHiddenEvents() {
+      const emptyIndices = [];
+      for (let i = 0; i < CELL_COUNT; i += 1) {
+        if (isCellPlaceable(i)) emptyIndices.push(i);
+      }
+
+      if (!emptyIndices.length) {
+        eventState.assigned = true;
+        return;
+      }
+
+      const eventCount = Math.min(5, EVENT_TYPES.length, emptyIndices.length);
+      const selectedEvents = shuffle(EVENT_TYPES).slice(0, eventCount);
+      const selectedCells = shuffle(emptyIndices).slice(0, eventCount);
+
+      eventState.hiddenByCell = new Map();
+      selectedCells.forEach((index, i) => {
+        eventState.hiddenByCell.set(index, selectedEvents[i]);
+      });
+
+      eventState.assigned = true;
+      setStatus("Hidden chaos events are now armed on empty tiles.");
+    }
+
+    function startEventAlertVisuals() {
+      ui.boardShell.classList.add("alert-glow", "alert-shimmer");
+      document.body.classList.add("screen-pulse");
+      setTimeout(() => {
+        document.body.classList.remove("screen-pulse");
+      }, 480);
+    }
+
+    function beginEvent(eventType, triggerPlayerId) {
+      eventState.active = true;
+      eventState.phase = "alert";
+      eventState.currentType = eventType;
+      eventState.triggerPlayerId = triggerPlayerId;
+      eventState.pending = null;
+
+      showEventPanel(eventType, triggerPlayerId);
+      setEventHelper("Danger signal engaged. Stand by for chaos sequence.");
+      setEventStatus("Alarm sounding...");
+      setEventActions([]);
+
+      updateGameControls();
+      startEventAlertVisuals();
+      playSfx("alarm");
+      renderBoard();
+
+      clearTimeout(eventState.alertTimer);
+      eventState.alertTimer = setTimeout(() => {
+        ui.boardShell.classList.remove("alert-glow", "alert-shimmer");
+        ui.boardShell.classList.add("selection-glow");
+        beginEventInteraction(eventType);
+      }, 760);
+    }
+
+    function teardownEventState() {
+      clearTimeout(eventState.alertTimer);
+      eventState.alertTimer = null;
+
+      eventState.active = false;
+      eventState.phase = "idle";
+      eventState.currentType = null;
+      eventState.triggerPlayerId = null;
+      eventState.pending = null;
+
+      ui.board.classList.remove("selection-mode");
+      ui.boardShell.classList.remove("alert-glow", "alert-shimmer", "selection-glow");
+      document.body.classList.remove("screen-pulse");
+      hideEventPanel();
+      updateGameControls();
+    }
+
+    function resolveEvent(statusText) {
+      if (!eventState.active) return;
+      eventState.phase = "resolving";
+      clearPendingSelection();
+      clearEventActions();
+      setEventStatus(statusText);
+      setEventHelper("Event resolved. Returning to turn flow.");
+      renderBoard();
+
+      setTimeout(() => {
+        teardownEventState();
+        const ended = evaluateBoardForEnd(statusText);
+        if (ended) return;
+        finalizeTurnCycle();
+      }, 220);
+    }
+
+    function noTargetContinue(message) {
+      setEventHelper("No valid interaction target for this event.");
+      setEventStatus(message);
+      setEventActions([
+        {
+          label: "Continue",
+          onClick: () => resolveEvent(message)
+        }
+      ]);
+    }
+
+    function setPendingSelection(pending) {
+      eventState.pending = {
+        hoverIndex: null,
+        lastExclusiveDiag: null,
+        ...pending
+      };
+      ui.board.classList.add("selection-mode");
+      renderBoard();
+    }
+
+    function clearPendingSelection() {
+      eventState.pending = null;
+      ui.board.classList.remove("selection-mode");
+      renderBoard();
+    }
+
+    function getOpponentTileIndices(playerId, effectKind = null) {
+      const enemyMark = playerState.players[otherPlayerId(playerId)].mark;
+      const indices = [];
+      for (let i = 0; i < CELL_COUNT; i += 1) {
+        if (boardState.cells[i].mark !== enemyMark) continue;
+        if (!effectKind) {
+          indices.push(i);
+          continue;
+        }
+        const affect = cellAffectState(i, effectKind);
+        if (affect === true || affect === "shield") indices.push(i);
+      }
+      return indices;
+    }
+
+    function getMyTileIndices(playerId, effectKind = null) {
+      const myMark = playerState.players[playerId].mark;
+      const indices = [];
+      for (let i = 0; i < CELL_COUNT; i += 1) {
+        if (boardState.cells[i].mark !== myMark) continue;
+        if (!effectKind) {
+          indices.push(i);
+          continue;
+        }
+        const affect = cellAffectState(i, effectKind);
+        if (affect === true || affect === "shield") indices.push(i);
+      }
+      return indices;
+    }
+
+    function getRowsWithAffectableMarks() {
+      const rows = [];
+      for (let row = 0; row < SIZE; row += 1) {
+        if (isRowFrozen(row)) continue;
+        let available = false;
+        for (let col = 0; col < SIZE; col += 1) {
+          const index = rcToIndex(row, col);
+          if (!boardState.cells[index].mark) continue;
+          const affect = cellAffectState(index, "erase");
+          if (affect === true || affect === "shield") {
+            available = true;
+            break;
+          }
+        }
+        if (available) rows.push(row);
+      }
+      return rows;
+    }
+
+    function getColsWithAffectableMarks() {
+      const cols = [];
+      for (let col = 0; col < SIZE; col += 1) {
+        let available = false;
+        for (let row = 0; row < SIZE; row += 1) {
+          const index = rcToIndex(row, col);
+          if (!boardState.cells[index].mark) continue;
+          const affect = cellAffectState(index, "erase");
+          if (affect === true || affect === "shield") {
+            available = true;
+            break;
+          }
+        }
+        if (available) cols.push(col);
+      }
+      return cols;
+    }
+
+    function getDiagonalAffectability() {
+      const out = { main: false, anti: false };
+      for (let i = 0; i < SIZE; i += 1) {
+        const main = rcToIndex(i, i);
+        const anti = rcToIndex(i, SIZE - 1 - i);
+
+        if (boardState.cells[main].mark) {
+          const affect = cellAffectState(main, "erase");
+          if (affect === true || affect === "shield") out.main = true;
+        }
+
+        if (boardState.cells[anti].mark) {
+          const affect = cellAffectState(anti, "erase");
+          if (affect === true || affect === "shield") out.anti = true;
+        }
+      }
+      return out;
+    }
+
+    function orthogonalNeighbors(index) {
+      const [row, col] = indexToRC(index);
+      const dirs = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+      ];
+
+      const out = [];
+      for (const [dr, dc] of dirs) {
+        const nr = row + dr;
+        const nc = col + dc;
+        if (nr < 0 || nr >= SIZE || nc < 0 || nc >= SIZE) continue;
+        out.push(rcToIndex(nr, nc));
+      }
+      return out;
+    }
+
+    function findLineBoostIndex(playerId) {
+      const mark = playerState.players[playerId].mark;
+      const dirs = [
+        [0, 1],
+        [1, 0],
+        [1, 1],
+        [1, -1]
+      ];
+
+      let bestIndex = null;
+      let bestLength = -1;
+
+      for (let row = 0; row < SIZE; row += 1) {
+        for (let col = 0; col < SIZE; col += 1) {
+          if (boardState.cells[rcToIndex(row, col)].mark !== mark) continue;
+
+          for (const [dr, dc] of dirs) {
+            let startR = row;
+            let startC = col;
+            while (
+              startR - dr >= 0 &&
+              startR - dr < SIZE &&
+              startC - dc >= 0 &&
+              startC - dc < SIZE &&
+              boardState.cells[rcToIndex(startR - dr, startC - dc)].mark === mark
+            ) {
+              startR -= dr;
+              startC -= dc;
+            }
+
+            let len = 0;
+            let r = startR;
+            let c = startC;
+            while (
+              r >= 0 &&
+              r < SIZE &&
+              c >= 0 &&
+              c < SIZE &&
+              boardState.cells[rcToIndex(r, c)].mark === mark
+            ) {
+              len += 1;
+              r += dr;
+              c += dc;
+            }
+
+            const ends = [
+              [startR - dr, startC - dc],
+              [r, c]
+            ];
+
+            for (const [er, ec] of ends) {
+              if (er < 0 || er >= SIZE || ec < 0 || ec >= SIZE) continue;
+              const index = rcToIndex(er, ec);
+              if (!isCellPlaceable(index) || isIndexFrozen(index)) continue;
+              if (len > bestLength) {
+                bestLength = len;
+                bestIndex = index;
+              }
+            }
+          }
+        }
+      }
+
+      return bestIndex;
+    }
+
+    function beginEventInteraction(eventType) {
+      if (!eventState.active || roundState.gameOver) return;
+      eventState.phase = "select";
+
+      switch (eventType) {
+        case "ERASE_OPPONENT": {
+          const valid = getOpponentTileIndices(playerState.currentPlayerId, "erase");
+          if (!valid.length) {
+            noTargetContinue("Event fizzled: no erasable opponent tile.");
+            return;
+          }
+          setEventHelper("Hover to preview. Click to confirm.");
+          setEventStatus("Select an opponent tile to erase.");
+          setPendingSelection({
+            mode: "cell",
+            validIndices: valid,
+            baseStatus: "Select an opponent tile to erase.",
+            onPick: (index) => {
+              const changed = eraseCell(index);
+              resolveEvent(changed ? `Erased ${coordLabel(index)}.` : `Erase blocked at ${coordLabel(index)}.`);
+            }
+          });
+          break;
+        }
+        case "SWAP_TILES": {
+          const mine = getMyTileIndices(playerState.currentPlayerId, "swap");
+          const enemy = getOpponentTileIndices(playerState.currentPlayerId, "swap");
+          if (!mine.length || !enemy.length) {
+            noTargetContinue("Event fizzled: swap unavailable.");
+            return;
+          }
+          setEventHelper("Hover to preview. Click to confirm.");
+          setEventStatus("Step 1: Select one of your tiles.");
+          setPendingSelection({
+            mode: "swap",
+            step: "mine",
+            mineIndices: mine,
+            enemyIndices: enemy,
+            selectedMine: null,
+            baseStatus: "Step 1: Select one of your tiles."
+          });
+          break;
+        }
+        case "ERASE_ROW": {
+          const rows = getRowsWithAffectableMarks();
+          if (!rows.length) {
+            noTargetContinue("Event fizzled: no erasable row.");
+            return;
+          }
+          setEventHelper("Hover to preview. Click to confirm.");
+          setEventStatus("Hover any tile to preview a row, then click to wipe.");
+          setPendingSelection({
+            mode: "row",
+            validRows: rows,
+            baseStatus: "Hover any tile to preview a row, then click to wipe.",
+            onPick: (row) => {
+              const changed = wipeRow(row);
+              resolveEvent(changed ? `Row ${row + 1} wiped.` : `Row ${row + 1} could not be changed.`);
+            }
+          });
+          break;
+        }
+        case "ERASE_COLUMN": {
+          const cols = getColsWithAffectableMarks();
+          if (!cols.length) {
+            noTargetContinue("Event fizzled: no erasable column.");
+            return;
+          }
+          setEventHelper("Hover to preview. Click to confirm.");
+          setEventStatus("Hover any tile to preview a column, then click to wipe.");
+          setPendingSelection({
+            mode: "col",
+            validCols: cols,
+            baseStatus: "Hover any tile to preview a column, then click to wipe.",
+            onPick: (col) => {
+              const changed = wipeColumn(col);
+              resolveEvent(changed ? `Column ${col + 1} wiped.` : `Column ${col + 1} could not be changed.`);
+            }
+          });
+          break;
+        }
+        case "EXTRA_TURN": {
+          setEventHelper("Apply this event to keep your turn.");
+          setEventStatus("Press Apply Event to continue.");
+          setEventActions([
+            {
+              label: "Apply Event",
+              onClick: () => {
+                roundState.extraTurnPending = true;
+                resolveEvent(`${currentPlayer().name} gained an extra turn.`);
+              }
+            }
+          ]);
+          break;
+        }
+        case "DIAGONAL_WIPE": {
+          const affect = getDiagonalAffectability();
+          const valid = [];
+          if (affect.main) valid.push("main");
+          if (affect.anti) valid.push("anti");
+          if (!valid.length) {
+            noTargetContinue("Event fizzled: no erasable diagonal.");
+            return;
+          }
+          setEventHelper("Hover to preview. Click to confirm.");
+          setEventStatus("Choose a diagonal to erase.");
+          setPendingSelection({
+            mode: "diag",
+            validDiagonals: valid,
+            baseStatus: "Choose a diagonal to erase.",
+            onPick: (diag) => {
+              const changed = wipeDiagonal(diag);
+              const label = diag === "main" ? "Main" : "Anti";
+              resolveEvent(changed ? `${label} diagonal wiped.` : `${label} diagonal could not be changed.`);
+            }
+          });
+          break;
+        }
+        case "LOCK_TILE": {
+          const valid = [];
+          for (let i = 0; i < CELL_COUNT; i += 1) {
+            if (!boardState.cells[i].locked && !boardState.cells[i].blocked && !isIndexFrozen(i)) {
+              valid.push(i);
+            }
+          }
+          if (!valid.length) {
+            noTargetContinue("Event fizzled: no lockable tile.");
+            return;
+          }
+          setEventHelper("Hover to preview. Click to confirm.");
+          setEventStatus("Select a tile to lock permanently.");
+          setPendingSelection({
+            mode: "cell",
+            validIndices: valid,
+            baseStatus: "Select a tile to lock permanently.",
+            onPick: (index) => {
+              boardState.cells[index].locked = true;
+              resolveEvent(`Locked ${coordLabel(index)}.`);
+            }
+          });
+          break;
+        }
+        case "SHIELD_TILE": {
+          const mine = getMyTileIndices(playerState.currentPlayerId);
+          const valid = mine.filter((index) => !boardState.cells[index].shield && !isIndexFrozen(index));
+          if (!valid.length) {
+            noTargetContinue("Event fizzled: no shield target.");
+            return;
+          }
+          setEventHelper("Hover to preview. Click to confirm.");
+          setEventStatus("Select one of your tiles to shield.");
+          setPendingSelection({
+            mode: "cell",
+            validIndices: valid,
+            baseStatus: "Select one of your tiles to shield.",
+            onPick: (index) => {
+              boardState.cells[index].shield = true;
+              resolveEvent(`Shield applied at ${coordLabel(index)}.`);
+            }
+          });
+          break;
+        }
+        case "MIRROR_MOVE": {
+          setEventHelper("Apply this event to force a mirrored response.");
+          setEventStatus("Press Apply Event to continue.");
+          setEventActions([
+            {
+              label: "Apply Event",
+              onClick: () => {
+                const targetPlayerId = otherPlayerId(playerState.currentPlayerId);
+                const targetIndex = mirroredIndex(roundState.lastPlacementIndex);
+                roundState.mirrorConstraint = { targetPlayerId, targetIndex };
+                resolveEvent(`${playerState.players[targetPlayerId].name} must play ${coordLabel(targetIndex)} if open.`);
+              }
+            }
+          ]);
+          break;
+        }
+        case "CONVERT_ADJACENT": {
+          const enemyMark = otherPlayer().mark;
+          const neighbors = orthogonalNeighbors(roundState.lastPlacementIndex).filter((index) => {
+            if (boardState.cells[index].mark !== enemyMark) return false;
+            const affect = cellAffectState(index, "erase");
+            return affect === true || affect === "shield";
+          });
+          if (!neighbors.length) {
+            noTargetContinue("Event fizzled: no adjacent opponent tile.");
+            return;
+          }
+          setEventHelper("Hover to preview. Click to confirm.");
+          setEventStatus("Select adjacent opponent tile to convert.");
+          setPendingSelection({
+            mode: "cell",
+            validIndices: neighbors,
+            baseStatus: "Select adjacent opponent tile to convert.",
+            onPick: (index) => {
+              const erased = eraseCell(index);
+              if (erased) {
+                boardState.cells[index].mark = currentPlayer().mark;
+                playSfx("place");
+                resolveEvent(`Converted ${coordLabel(index)}.`);
+              } else {
+                resolveEvent(`Conversion blocked at ${coordLabel(index)}.`);
+              }
+            }
+          });
+          break;
+        }
+        case "FREEZE_ROW": {
+          const rows = [];
+          for (let row = 0; row < SIZE; row += 1) {
+            if (!isRowFrozen(row)) rows.push(row);
+          }
+          if (!rows.length) {
+            noTargetContinue("Event fizzled: all rows already frozen.");
+            return;
+          }
+          setEventHelper("Hover to preview. Click to confirm.");
+          setEventStatus("Select a row to freeze for two turns.");
+          setPendingSelection({
+            mode: "row",
+            validRows: rows,
+            baseStatus: "Select a row to freeze for two turns.",
+            onPick: (row) => {
+              roundState.freezeRows.set(row, 2);
+              resolveEvent(`Row ${row + 1} frozen for two turns.`);
+            }
+          });
+          break;
+        }
+        case "DOUBLE_PLACEMENT": {
+          setEventHelper("Apply this event to gain an extra placement.");
+          setEventStatus("Press Apply Event to continue.");
+          setEventActions([
+            {
+              label: "Apply Event",
+              onClick: () => {
+                roundState.placementsRemaining += 1;
+                resolveEvent(`${currentPlayer().name} gained one extra placement.`);
+              }
+            }
+          ]);
+          break;
+        }
+        case "BLOCK_EMPTY": {
+          const valid = [];
+          for (let i = 0; i < CELL_COUNT; i += 1) {
+            if (isCellPlaceable(i) && !isIndexFrozen(i)) valid.push(i);
+          }
+          if (!valid.length) {
+            noTargetContinue("Event fizzled: no empty tile to block.");
+            return;
+          }
+          setEventHelper("Hover to preview. Click to confirm.");
+          setEventStatus("Select an empty tile to block permanently.");
+          setPendingSelection({
+            mode: "cell",
+            validIndices: valid,
+            baseStatus: "Select an empty tile to block permanently.",
+            onPick: (index) => {
+              boardState.cells[index].blocked = true;
+              resolveEvent(`Blocked ${coordLabel(index)}.`);
+            }
+          });
+          break;
+        }
+        case "LINE_BOOST": {
+          const target = findLineBoostIndex(playerState.currentPlayerId);
+          if (target === null) {
+            noTargetContinue("Event fizzled: no open line end.");
+            return;
+          }
+          setEventHelper("Apply this event to auto-place at highlighted line end.");
+          setEventStatus(`Target selected: ${coordLabel(target)}.`);
+          setEventActions([
+            {
+              label: "Apply Event",
+              onClick: () => {
+                if (!isCellPlaceable(target) || isIndexFrozen(target)) {
+                  resolveEvent("Line boost target became unavailable.");
+                  return;
+                }
+                boardState.cells[target].mark = currentPlayer().mark;
+                playSfx("place");
+                resolveEvent(`Line boost placed at ${coordLabel(target)}.`);
+              }
+            }
+          ]);
+          break;
+        }
+        case "ROW_SHIFT": {
+          const rows = [];
+          for (let row = 0; row < SIZE; row += 1) {
+            if (isRowFrozen(row)) continue;
+            let hasMark = false;
+            for (let col = 0; col < SIZE; col += 1) {
+              if (boardState.cells[rcToIndex(row, col)].mark) {
+                hasMark = true;
+                break;
+              }
+            }
+            if (hasMark) rows.push(row);
+          }
+          if (!rows.length) {
+            noTargetContinue("Event fizzled: no row can shift.");
+            return;
+          }
+
+          setEventHelper("Hover to preview. Click to confirm.");
+          setEventStatus("Select a row to shift.");
+          setPendingSelection({
+            mode: "rowShift",
+            step: "row",
+            validRows: rows,
+            selectedRow: null,
+            baseStatus: "Select a row to shift."
+          });
+          break;
+        }
+        default:
+          noTargetContinue("Unknown event state. Continuing.");
+      }
+
+      renderBoard();
+    }
+
+    function resolveDiagonalFromIndex(index, pending) {
+      const [row, col] = indexToRC(index);
+      const onMain = row === col;
+      const onAnti = row + col === SIZE - 1;
+      if (!onMain && !onAnti) return null;
+
+      if (onMain && !onAnti) {
+        return pending.validDiagonals.includes("main") ? "main" : null;
+      }
+
+      if (!onMain && onAnti) {
+        return pending.validDiagonals.includes("anti") ? "anti" : null;
+      }
+
+      if (pending.validDiagonals.length === 1) {
+        return pending.validDiagonals[0];
+      }
+
+      if (pending.lastExclusiveDiag && pending.validDiagonals.includes(pending.lastExclusiveDiag)) {
+        return pending.lastExclusiveDiag;
+      }
+
+      return null;
+    }
+
+    function hoverDiagonalFromIndex(index, pending) {
+      if (index === null) return null;
+      const [row, col] = indexToRC(index);
+      const onMain = row === col;
+      const onAnti = row + col === SIZE - 1;
+      if (!onMain && !onAnti) return null;
+
+      if (onMain && !onAnti) {
+        return pending.validDiagonals.includes("main") ? "main" : null;
+      }
+
+      if (!onMain && onAnti) {
+        return pending.validDiagonals.includes("anti") ? "anti" : null;
+      }
+
+      const hasMain = pending.validDiagonals.includes("main");
+      const hasAnti = pending.validDiagonals.includes("anti");
+      if (hasMain && hasAnti) return "both";
+      if (hasMain) return "main";
+      if (hasAnti) return "anti";
+      return null;
+    }
+
+    function onCellHover(index) {
+      const pending = eventState.pending;
+      if (!pending) return;
+      pending.hoverIndex = index;
+
+      if (pending.mode === "diag") {
+        const hover = hoverDiagonalFromIndex(index, pending);
+        pending.hoverDiag = hover;
+        if (hover === "main" || hover === "anti") {
+          pending.lastExclusiveDiag = hover;
+        }
+      }
+
+      updatePendingHoverStatus();
+      renderBoard();
+    }
+
+    function updatePendingHoverStatus() {
+      const pending = eventState.pending;
+      if (!pending) return;
+
+      const index = pending.hoverIndex;
+      if (index === null) {
+        if (pending.baseStatus) setEventStatus(pending.baseStatus);
+        return;
+      }
+
+      const [row, col] = indexToRC(index);
+
+      if (pending.mode === "cell") {
+        if (pending.validIndices.includes(index)) {
+          setEventStatus(`Preview target: ${coordLabel(index)}.`);
+        }
+        return;
+      }
+
+      if (pending.mode === "row") {
+        if (pending.validRows.includes(row)) {
+          setEventStatus(`Preview row: R${row + 1}. Click to confirm.`);
+        }
+        return;
+      }
+
+      if (pending.mode === "col") {
+        if (pending.validCols.includes(col)) {
+          setEventStatus(`Preview column: C${col + 1}. Click to confirm.`);
+        }
+        return;
+      }
+
+      if (pending.mode === "diag") {
+        const diag = resolveDiagonalFromIndex(index, pending);
+        if (diag === "main") setEventStatus("Preview main diagonal (red). Click to confirm.");
+        if (diag === "anti") setEventStatus("Preview anti diagonal (blue). Click to confirm.");
+        if (!diag) setEventStatus("Center tile intersects both diagonals. Hover a side diagonal tile to choose.");
+        return;
+      }
+
+      if (pending.mode === "swap") {
+        if (pending.step === "mine" && pending.mineIndices.includes(index)) {
+          setEventStatus(`Select your tile at ${coordLabel(index)}.`);
+        } else if (pending.step === "enemy" && pending.enemyIndices.includes(index)) {
+          setEventStatus(`Select opponent tile at ${coordLabel(index)}.`);
+        }
+        return;
+      }
+
+      if (pending.mode === "rowShift") {
+        if (pending.step === "row" && pending.validRows.includes(row)) {
+          setEventStatus(`Preview row R${row + 1}. Click to lock row.`);
+        }
+      }
+    }
+
+    function onCellClick(index) {
+      if (roundState.gameOver) return;
+
+      if (eventState.active) {
+        handleEventBoardSelectionClick(index);
+        return;
+      }
+
+      placeMark(index);
+    }
+
+    function handleEventBoardSelectionClick(index) {
+      if (!eventState.active || eventState.phase !== "select") return;
+      const pending = eventState.pending;
+      if (!pending) return;
+
+      if (pending.mode === "cell") {
+        if (!pending.validIndices.includes(index)) return;
+        pending.onPick(index);
+        return;
+      }
+
+      if (pending.mode === "row") {
+        const [row] = indexToRC(index);
+        if (!pending.validRows.includes(row)) return;
+        pending.onPick(row);
+        return;
+      }
+
+      if (pending.mode === "col") {
+        const [, col] = indexToRC(index);
+        if (!pending.validCols.includes(col)) return;
+        pending.onPick(col);
+        return;
+      }
+
+      if (pending.mode === "diag") {
+        const diag = resolveDiagonalFromIndex(index, pending);
+        if (!diag) return;
+        pending.onPick(diag);
+        return;
+      }
+
+      if (pending.mode === "swap") {
+        if (pending.step === "mine") {
+          if (!pending.mineIndices.includes(index)) return;
+          pending.selectedMine = index;
+          pending.step = "enemy";
+          pending.enemyIndices = getOpponentTileIndices(playerState.currentPlayerId, "swap");
+          pending.baseStatus = `Step 2: Select opponent tile to swap with ${coordLabel(index)}.`;
+          setEventStatus(pending.baseStatus);
+          renderBoard();
+          return;
+        }
+
+        if (pending.step === "enemy") {
+          if (!pending.enemyIndices.includes(index)) return;
+          const swapped = swapCells(pending.selectedMine, index);
+          resolveEvent(
+            swapped
+              ? `Swapped ${coordLabel(pending.selectedMine)} with ${coordLabel(index)}.`
+              : "Swap was blocked by lock, freeze, or shield."
+          );
+        }
+        return;
+      }
+
+      if (pending.mode === "rowShift") {
+        if (pending.step === "row") {
+          const [row] = indexToRC(index);
+          if (!pending.validRows.includes(row)) return;
+          pending.selectedRow = row;
+          pending.step = "direction";
+          pending.baseStatus = `Row R${row + 1} selected. Choose direction.`;
+          setEventHelper("Use panel controls to apply shift direction.");
+          setEventStatus(pending.baseStatus);
+          setEventActions([
+            {
+              label: "Shift Left",
+              onClick: () => {
+                shiftRow(row, -1);
+                resolveEvent(`Row R${row + 1} shifted left.`);
+              }
+            },
+            {
+              label: "Shift Right",
+              onClick: () => {
+                shiftRow(row, 1);
+                resolveEvent(`Row R${row + 1} shifted right.`);
+              }
+            }
+          ]);
+          renderBoard();
+        }
+      }
+    }
+
+    function placeMark(index) {
+      const cell = boardState.cells[index];
+      if (!cell || !isCellPlaceable(index)) {
+        setStatus("Tile unavailable.");
+        return;
+      }
+
+      if (roundState.mirrorConstraint && roundState.mirrorConstraint.targetPlayerId === playerState.currentPlayerId) {
+        if (roundState.mirrorConstraint.targetIndex !== index) {
+          setStatus("Mirror lock active: you must play the mirrored target tile.");
+          return;
+        }
+        roundState.mirrorConstraint = null;
+      }
+
+      cell.mark = currentPlayer().mark;
+      roundState.lastPlacementIndex = index;
+      roundState.playersWhoPlaced.add(playerState.currentPlayerId);
+      playSfx("place");
+
+      renderBoard();
+
+      if (evaluateBoardForEnd()) return;
+
+      if (!eventState.assigned && roundState.playersWhoPlaced.size >= 2) {
+        assignHiddenEvents();
+      }
+
+      if (eventState.assigned && eventState.hiddenByCell.has(index)) {
+        const eventType = eventState.hiddenByCell.get(index);
+        eventState.hiddenByCell.delete(index);
+        beginEvent(eventType, playerState.currentPlayerId);
+        return;
+      }
+
+      finalizeTurnCycle();
+    }
+
+    function renderBoard() {
+      const pending = eventState.pending;
+      const hoverIndex = pending ? pending.hoverIndex : null;
+      const hoverRow = hoverIndex === null ? null : indexToRC(hoverIndex)[0];
+      const hoverCol = hoverIndex === null ? null : indexToRC(hoverIndex)[1];
+
+      const hoverDiag = pending && pending.mode === "diag" ? pending.hoverDiag : null;
+
+      for (let i = 0; i < CELL_COUNT; i += 1) {
+        const cellEl = ui.board.children[i];
+        const cell = boardState.cells[i];
+        const [row, col] = indexToRC(i);
+
+        cellEl.className = "cell";
+        cellEl.innerHTML = "";
+
+        if (cell.blocked) cellEl.classList.add("blocked");
+        if (cell.locked) cellEl.classList.add("locked");
+        if (cell.shield) cellEl.classList.add("shielded");
+        if (isRowFrozen(row)) cellEl.classList.add("frozen");
+
+        if (pending) {
+          if (pending.mode === "cell") {
+            if (pending.validIndices.includes(i)) cellEl.classList.add("selectable");
+          }
+
+          if (pending.mode === "row") {
+            if (pending.validRows.includes(row)) cellEl.classList.add("selectable");
+            if (hoverRow !== null && pending.validRows.includes(hoverRow) && row === hoverRow) {
+              cellEl.classList.add("preview-row");
+            }
+          }
+
+          if (pending.mode === "col") {
+            if (pending.validCols.includes(col)) cellEl.classList.add("selectable");
+            if (hoverCol !== null && pending.validCols.includes(hoverCol) && col === hoverCol) {
+              cellEl.classList.add("preview-col");
+            }
+          }
+
+          if (pending.mode === "diag") {
+            const onMain = row === col;
+            const onAnti = row + col === SIZE - 1;
+            const mainValid = pending.validDiagonals.includes("main");
+            const antiValid = pending.validDiagonals.includes("anti");
+
+            if (onMain && mainValid) {
+              cellEl.classList.add("diag-main", "selectable");
+            }
+
+            if (onAnti && antiValid) {
+              cellEl.classList.add("diag-anti", "selectable");
+            }
+
+            if (onMain && onAnti && mainValid && antiValid) {
+              cellEl.classList.add("diag-center");
+            }
+
+            if ((hoverDiag === "main" || hoverDiag === "both") && onMain && mainValid) {
+              cellEl.classList.add("diag-hover-main");
+            }
+
+            if ((hoverDiag === "anti" || hoverDiag === "both") && onAnti && antiValid) {
+              cellEl.classList.add("diag-hover-anti");
+            }
+          }
+
+          if (pending.mode === "swap") {
+            const valid = pending.step === "mine" ? pending.mineIndices : pending.enemyIndices;
+            if (valid.includes(i)) cellEl.classList.add("selectable");
+            if (pending.selectedMine === i) cellEl.classList.add("preview-selected");
+          }
+
+          if (pending.mode === "rowShift") {
+            if (pending.step === "row") {
+              if (pending.validRows.includes(row)) cellEl.classList.add("selectable");
+              if (hoverRow !== null && pending.validRows.includes(hoverRow) && row === hoverRow) {
+                cellEl.classList.add("preview-row");
+              }
+            }
+            if (pending.selectedRow !== null && pending.selectedRow === row) {
+              cellEl.classList.add("preview-selected");
+            }
+          }
+        }
+
+        if (cell.mark) {
+          const markEl = document.createElement("div");
+          markEl.className = `mark ${cell.mark.toLowerCase()}`;
+          cellEl.appendChild(markEl);
+        }
+      }
+    }
+
+    function hookInputs() {
+      const syncSetup = () => applySetupNames();
+      ui.p1NameInput.addEventListener("input", syncSetup);
+      ui.p2NameInput.addEventListener("input", syncSetup);
+
+      ui.toSetupBtn.addEventListener("click", () => {
+        applySetupNames();
+        showScreen("setup");
+      });
+
+      ui.backToIntroBtn.addEventListener("click", () => {
+        showScreen("intro");
+      });
+
+      ui.startRoundBtn.addEventListener("click", () => {
+        startRoundFromSetup();
+      });
+
+      ui.nextRoundBtn.addEventListener("click", () => {
+        startNextRound();
+      });
+
+      ui.toSetupFromGameBtn.addEventListener("click", () => {
+        if (eventState.active) return;
+        applySetupNames();
+        showScreen("setup");
+      });
+
+      ui.resetScoresBtn.addEventListener("click", () => {
+        resetScores();
+      });
+
+      ui.crtToggleBtn.addEventListener("click", () => {
+        if (eventState.active) return;
+        document.body.classList.toggle("crt");
+        ui.crtToggleBtn.textContent = document.body.classList.contains("crt") ? "CRT: ON" : "CRT: OFF";
+      });
+
+      window.addEventListener("pointerdown", () => {
+        initAudio();
+      }, { once: true });
+    }
+
+    function bootstrap() {
+      buildBoardUi();
+      hookInputs();
+      resetBoardStateForRound();
+      resetEventStateForRound();
+      applySetupNames();
+      updateSetupPreview();
+      setStatus("Configure names, then start a round.");
+      renderHud();
+      renderBoard();
+      updateGameControls();
+      showScreen("intro");
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>
