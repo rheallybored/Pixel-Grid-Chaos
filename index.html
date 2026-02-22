@@ -19,6 +19,7 @@
       --ink: #d8f6ff;
       --muted: #9ac4d5;
       --board-size: min(72vmin, 560px);
+      --event-panel-max: 420px;
     }
 
     * {
@@ -35,7 +36,8 @@
         radial-gradient(circle at 13% 12%, #1e2859 0%, transparent 40%),
         radial-gradient(circle at 88% 18%, #311f54 0%, transparent 35%),
         linear-gradient(180deg, var(--bg-2) 0%, var(--bg-1) 50%, var(--bg-0) 100%);
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
 
     body::before {
@@ -364,6 +366,17 @@
       opacity: 1;
     }
 
+    html.event-active-root,
+    html.event-active-root body {
+      overflow: hidden;
+      height: 100%;
+    }
+
+    body.event-active {
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+
     .game-screen {
       display: none;
       width: min(1120px, 100%);
@@ -672,13 +685,18 @@
       border: 4px solid #2c90b2;
       background: linear-gradient(180deg, rgba(14, 18, 42, 0.95), rgba(9, 12, 27, 0.95));
       width: min(100%, 520px);
-      height: clamp(220px, 30vh, 420px);
+      max-height: min(var(--event-panel-max), 88dvh);
       padding: 8px;
       position: relative;
-      overflow: hidden;
-      display: grid;
-      grid-template-rows: auto 1fr;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
       gap: 8px;
+      z-index: 30;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      scroll-padding-bottom: 96px;
     }
 
     .event-panel-head {
@@ -707,23 +725,26 @@
     .event-card {
       border: 3px solid #31b5d2;
       background: linear-gradient(180deg, #1a1f46, #111633);
-      padding: 8px;
-      transform: translateX(120%);
+      padding: 0;
+      transform: translateX(14px);
       opacity: 0;
-      transition: transform 220ms steps(4, end), opacity 140ms linear;
       pointer-events: none;
-      display: flex;
+      display: none;
       flex-direction: column;
       min-height: 0;
-      height: 100%;
       gap: 8px;
+      position: relative;
     }
 
     .event-panel.active .event-card {
+      display: flex;
       transform: translateX(0);
       opacity: 1;
       pointer-events: auto;
-      animation: borderFlash 0.45s steps(2, end) infinite, cardBlink 0.6s steps(2, end) infinite alternate;
+      animation:
+        eventCardIn 220ms steps(4, end),
+        borderFlash 0.45s steps(2, end) infinite,
+        cardBlink 0.6s steps(2, end) infinite alternate;
     }
 
     .event-panel.active {
@@ -733,11 +754,12 @@
 
     .event-body {
       min-height: 0;
-      overflow-y: auto;
+      overflow: visible;
       display: grid;
-      gap: 8px;
+      gap: 10px;
       align-content: start;
-      padding-right: 2px;
+      padding: 16px;
+      padding-bottom: 96px;
     }
 
     .event-kicker {
@@ -783,20 +805,40 @@
     .event-actions {
       margin-top: auto;
       border-top: 2px solid #2b7391;
-      padding-top: 8px;
+      padding: 10px;
+      padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
       display: flex;
-      flex-wrap: wrap;
+      flex-direction: column;
+      flex-wrap: nowrap;
       gap: 8px;
       justify-content: center;
       align-items: center;
       background: linear-gradient(180deg, rgba(12, 18, 39, 0.92), rgba(8, 12, 28, 0.96));
+      position: sticky;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 2;
     }
 
     .event-actions .pixel-btn {
-      min-width: min(92%, 230px);
+      width: 100%;
+      min-width: 0;
+      min-height: 48px;
       font-size: 13px;
       padding: 10px 12px;
       text-align: center;
+    }
+
+    @keyframes eventCardIn {
+      0% {
+        transform: translateX(16px);
+        opacity: 0;
+      }
+      100% {
+        transform: translateX(0);
+        opacity: 1;
+      }
     }
 
     .control-row {
@@ -807,11 +849,52 @@
       justify-content: center;
       gap: 8px;
       flex-wrap: wrap;
+      position: sticky;
+      bottom: 0;
+      z-index: 14;
     }
 
     .control-row .pixel-btn {
       font-size: 12px;
       padding: 8px 10px;
+    }
+
+    @media (max-width: 767px) {
+      .game-screen {
+        height: min(100dvh - 10px, 940px);
+      }
+
+      .hud {
+        padding: 7px 8px;
+      }
+
+      .hud-text {
+        font-size: clamp(11px, 2.7vw, 13px);
+      }
+
+      .arena {
+        overflow: hidden;
+        gap: 8px;
+      }
+
+      .event-panel {
+        width: 100%;
+        max-height: var(--event-panel-max);
+      }
+
+      body.event-active .arena {
+        overflow: hidden;
+      }
+
+      body.event-active .event-panel {
+        max-height: min(var(--event-panel-max), 88dvh);
+        z-index: 44;
+      }
+
+      body.event-active .control-row {
+        display: none;
+        position: static;
+      }
     }
 
     @media (min-width: 768px) {
@@ -820,11 +903,12 @@
         align-items: start;
         justify-content: center;
         gap: 12px;
+        overflow-y: auto;
       }
 
       .event-panel {
         width: 100%;
-        height: var(--board-size);
+        max-height: var(--board-size);
       }
 
       .hud {
@@ -849,6 +933,14 @@
 
       .board-shell {
         padding: 4px;
+      }
+
+      .control-row {
+        position: static;
+      }
+
+      body.event-active .control-row {
+        display: flex;
       }
     }
   </style>
@@ -1221,16 +1313,17 @@
     }
 
     function updateBoardSizeForViewport() {
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
+      const viewport = window.visualViewport;
+      const vw = viewport ? viewport.width : window.innerWidth;
+      const vh = viewport ? viewport.height : window.innerHeight;
       interactionState.isMobileLayout = vw < 768;
 
       let size;
       if (interactionState.isMobileLayout) {
         const maxWidth = Math.max(260, vw - 20);
-        const maxHeight = Math.max(260, vh - 500);
+        const maxHeight = Math.max(230, vh - 500);
         size = Math.min(maxWidth, maxHeight);
-        size = Math.max(260, Math.min(size, 520));
+        size = Math.max(230, Math.min(size, 520));
       } else {
         const maxWidth = Math.min(620, vw * 0.56);
         const maxHeight = Math.max(260, vh - 240);
@@ -1239,11 +1332,34 @@
       }
 
       document.documentElement.style.setProperty("--board-size", `${Math.floor(size)}px`);
+      updateEventPanelMaxHeight();
 
       if (eventState.pending && ["row", "col", "diag", "rowShift"].includes(eventState.pending.mode)) {
         setEventHelper(selectionInstructionText());
       }
       renderBoard();
+    }
+
+    function updateEventPanelMaxHeight() {
+      if (!ui.gameScreen.classList.contains("active")) return;
+
+      const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      if (!isMobileLayout()) {
+        const desktopMax = Math.max(260, Math.floor(ui.boardShell.getBoundingClientRect().height));
+        document.documentElement.style.setProperty("--event-panel-max", `${desktopMax}px`);
+        return;
+      }
+
+      const hudHeight = ui.gameScreen.querySelector(".hud")?.getBoundingClientRect().height || 0;
+      const boardHeight = ui.boardShell.getBoundingClientRect().height || 0;
+      const controlsHeight = eventState.active
+        ? 0
+        : (ui.gameScreen.querySelector(".control-row")?.getBoundingClientRect().height || 0);
+      const safetyGap = 26;
+      const allowedByLayout = vh - hudHeight - boardHeight - controlsHeight - safetyGap;
+      const maxByRule = Math.floor(vh * 0.88);
+      const computed = Math.max(180, Math.min(Math.floor(allowedByLayout), maxByRule));
+      document.documentElement.style.setProperty("--event-panel-max", `${computed}px`);
     }
 
     function escapeHtml(text) {
@@ -1411,6 +1527,9 @@
       ui.eventIdle.hidden = true;
       ui.eventPanel.classList.add("active");
       document.body.classList.add("event-active");
+      document.documentElement.classList.add("event-active-root");
+      ui.gameScreen.classList.add("event-mode");
+      updateEventPanelMaxHeight();
     }
 
     function hideEventPanel() {
@@ -1420,6 +1539,9 @@
       ui.eventStatus.textContent = "";
       ui.eventHelper.textContent = "";
       document.body.classList.remove("event-active");
+      document.documentElement.classList.remove("event-active-root");
+      ui.gameScreen.classList.remove("event-mode");
+      updateEventPanelMaxHeight();
     }
 
     function setEventHelper(text) {
@@ -1959,7 +2081,6 @@
       eventState.currentType = null;
       eventState.triggerPlayerId = null;
       eventState.pending = null;
-      eventState.phase = "idle";
 
       ui.board.classList.remove("selection-mode");
       ui.boardShell.classList.remove("alert-glow", "alert-shimmer", "selection-glow");
@@ -3121,6 +3242,10 @@
       };
       window.addEventListener("resize", refreshLayout);
       window.addEventListener("orientationchange", refreshLayout);
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener("resize", refreshLayout);
+        window.visualViewport.addEventListener("scroll", refreshLayout);
+      }
     }
 
     function bootstrap() {
