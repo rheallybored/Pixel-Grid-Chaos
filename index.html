@@ -286,7 +286,8 @@
       letter-spacing: 0.6px;
     }
 
-    .field input {
+    .field input,
+    .field select {
       border: 2px solid #3f9ebd;
       background: #0a1026;
       color: var(--ink);
@@ -294,6 +295,11 @@
       font-size: 14px;
       padding: 8px;
       outline: none;
+    }
+
+    .field select {
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .setup-preview {
@@ -516,6 +522,32 @@
 
     .pass-banner.show {
       opacity: 1;
+    }
+
+    .round-banner {
+      position: absolute;
+      left: 50%;
+      top: 10px;
+      transform: translateX(-50%);
+      width: min(92%, 420px);
+      border: 3px solid var(--warn);
+      background: rgba(30, 18, 41, 0.96);
+      color: #ffe6aa;
+      text-transform: uppercase;
+      text-align: center;
+      letter-spacing: 0.9px;
+      font-size: clamp(13px, 3.9vw, 20px);
+      text-shadow: 1px 1px 0 #000;
+      padding: 9px 10px;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 7;
+      transition: opacity 120ms linear, transform 140ms ease;
+    }
+
+    .round-banner.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(2px);
     }
 
     .board-shell.major-shake {
@@ -835,6 +867,79 @@
       display: none;
     }
 
+    .match-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 110;
+      display: grid;
+      place-items: center;
+      padding: 14px;
+      background: rgba(4, 6, 16, 0.82);
+      backdrop-filter: blur(1px);
+    }
+
+    .match-overlay[hidden] {
+      display: none;
+    }
+
+    .match-card {
+      width: min(700px, 96vw);
+      border: 4px solid var(--warn);
+      background: linear-gradient(180deg, #1b173d, #120f29);
+      box-shadow: 0 0 26px rgba(255, 220, 111, 0.38);
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+      animation: borderFlash 0.55s steps(2, end) infinite;
+    }
+
+    .match-card::before {
+      content: "";
+      position: absolute;
+      inset: -45% -35%;
+      background:
+        radial-gradient(circle, rgba(255, 220, 111, 0.3) 0 6px, transparent 6px 100%),
+        radial-gradient(circle, rgba(115, 255, 93, 0.28) 0 5px, transparent 5px 100%),
+        radial-gradient(circle, rgba(255, 76, 148, 0.28) 0 5px, transparent 5px 100%);
+      background-size: 54px 54px, 62px 62px, 70px 70px;
+      background-position: 0 0, 14px 10px, 26px 22px;
+      opacity: 0.26;
+      pointer-events: none;
+      animation: starDrift 5s linear infinite;
+    }
+
+    .match-title {
+      margin: 0;
+      color: var(--warn);
+      text-transform: uppercase;
+      text-shadow: 2px 2px 0 #000;
+      font-size: clamp(22px, 5.5vw, 44px);
+      line-height: 1.15;
+      position: relative;
+    }
+
+    .match-subtitle,
+    .match-score {
+      margin: 10px 0 0;
+      font-size: clamp(13px, 3.3vw, 18px);
+      line-height: 1.45;
+      text-shadow: 1px 1px 0 #000;
+      position: relative;
+    }
+
+    .match-actions {
+      margin-top: 16px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      position: relative;
+    }
+
+    .match-actions .pixel-btn {
+      min-height: 48px;
+    }
+
     @keyframes eventCardIn {
       0% {
         transform: translateX(16px);
@@ -944,12 +1049,12 @@
           <p>Build five-in-a-row horizontally, vertically, or diagonally to win instantly.</p>
         </article>
         <article class="rule-card">
-          <h3>Hidden Events</h3>
-          <p>After the first move from each player, five hidden chaos events are armed on empty cells.</p>
+          <h3>Escalating Chaos</h3>
+          <p>Chaos events trigger automatically by turn count. Early game is calmer, late game destabilizes fast.</p>
         </article>
         <article class="rule-card">
           <h3>Trigger Behavior</h3>
-          <p>Landing on a hidden event tile launches an immediate chaos effect and selection mode.</p>
+          <p>On trigger turns, an event fires immediately after placement and must resolve before the next turn.</p>
         </article>
         <article class="rule-card">
           <h3>End-Game Scoring</h3>
@@ -963,7 +1068,7 @@
 
     <section id="setupScreen" class="screen" aria-label="Player setup">
       <h2 class="title">Match Setup</h2>
-      <p class="subtitle">Set player names, then launch the round. Marks are fixed: Player 1 = X, Player 2 = O.</p>
+      <p class="subtitle">Set player names and match format, then start. Marks are fixed: Player 1 = X, Player 2 = O.</p>
       <div class="setup-grid">
         <div class="setup-card">
           <h3>Players</h3>
@@ -974,6 +1079,14 @@
           <div class="field">
             <label for="p2Name">Player 2 Name (O)</label>
             <input id="p2Name" maxlength="20" value="Player 2" />
+          </div>
+          <div class="field">
+            <label for="matchFormat">Match Format</label>
+            <select id="matchFormat">
+              <option value="1">Best of 1</option>
+              <option value="3" selected>Best of 3</option>
+              <option value="5">Best of 5</option>
+            </select>
           </div>
         </div>
 
@@ -1001,12 +1114,13 @@
       <div class="arena">
         <div id="boardShell" class="board-shell">
           <div id="passBanner" class="pass-banner"></div>
+          <div id="roundBanner" class="round-banner" aria-live="polite"></div>
           <div id="board" class="board"></div>
         </div>
 
         <aside id="eventPanel" class="event-panel" aria-live="polite">
           <div class="event-panel-head">Chaos Console</div>
-          <p id="eventIdle" class="event-idle">No active event. Place marks and watch for hidden chaos triggers.</p>
+          <p id="eventIdle" class="event-idle">No active event. Place marks and watch the turn counter for chaos triggers.</p>
           <div id="eventCard" class="event-card">
             <div class="event-title">
               <p id="eventKicker" class="event-kicker">Chaos Event Triggered</p>
@@ -1031,6 +1145,18 @@
       </div>
     </section>
   </main>
+  <section id="matchOverlay" class="match-overlay" hidden aria-live="polite" aria-label="Match winner screen">
+    <div class="match-card">
+      <h2 id="matchTitle" class="match-title">Match Winner</h2>
+      <p id="matchSubtitle" class="match-subtitle"></p>
+      <p id="matchScore" class="match-score"></p>
+      <div class="match-actions">
+        <button id="playNewMatchBtn" class="pixel-btn" type="button">Play New Match</button>
+        <button id="rematchBtn" class="pixel-btn" type="button">Rematch</button>
+        <button id="changeSettingsBtn" class="pixel-btn" type="button">Change Settings</button>
+      </div>
+    </div>
+  </section>
   <div id="fxDim" class="fx-dim" aria-hidden="true"></div>
 
   <script>
@@ -1142,6 +1268,7 @@
       startRoundBtn: document.getElementById("startRoundBtn"),
       p1NameInput: document.getElementById("p1Name"),
       p2NameInput: document.getElementById("p2Name"),
+      matchFormatSelect: document.getElementById("matchFormat"),
       setupPreview: document.getElementById("setupPreview"),
       turnText: document.getElementById("turnText"),
       statusText: document.getElementById("statusText"),
@@ -1153,6 +1280,7 @@
       crtToggleBtn: document.getElementById("crtToggleBtn"),
       boardShell: document.getElementById("boardShell"),
       passBanner: document.getElementById("passBanner"),
+      roundBanner: document.getElementById("roundBanner"),
       board: document.getElementById("board"),
       eventPanel: document.getElementById("eventPanel"),
       eventCard: document.getElementById("eventCard"),
@@ -1163,7 +1291,14 @@
       eventTrigger: document.getElementById("eventTrigger"),
       eventHelper: document.getElementById("eventHelper"),
       eventStatus: document.getElementById("eventStatus"),
-      eventActions: document.getElementById("eventActions")
+      eventActions: document.getElementById("eventActions"),
+      matchOverlay: document.getElementById("matchOverlay"),
+      matchTitle: document.getElementById("matchTitle"),
+      matchSubtitle: document.getElementById("matchSubtitle"),
+      matchScore: document.getElementById("matchScore"),
+      playNewMatchBtn: document.getElementById("playNewMatchBtn"),
+      rematchBtn: document.getElementById("rematchBtn"),
+      changeSettingsBtn: document.getElementById("changeSettingsBtn")
     };
 
     const boardState = {
@@ -1172,37 +1307,50 @@
 
     const playerState = {
       players: {
-        p1: { id: "p1", name: "Player 1", mark: "X", wins: 0 },
-        p2: { id: "p2", name: "Player 2", mark: "O", wins: 0 }
+        p1: { id: "p1", name: "Player 1", mark: "X", wins: 0, matchWins: 0 },
+        p2: { id: "p2", name: "Player 2", mark: "O", wins: 0, matchWins: 0 }
       },
       currentPlayerId: "p1"
     };
 
     const eventState = {
-      assigned: false,
-      hiddenByCell: new Map(),
       active: false,
       phase: "idle",
       currentType: null,
       triggerPlayerId: null,
       pending: null,
-      alertTimer: null
+      alertTimer: null,
+      lastType: null
     };
 
     const roundState = {
       roundNumber: 1,
       starterId: "p1",
       nextStarterId: "p1",
+      turnCounter: 0,
       gameOver: false,
       winnerId: null,
       placementsRemaining: 1,
       extraTurnPending: false,
       mirrorConstraint: null,
       freezeRows: new Map(),
-      playersWhoPlaced: new Set(),
       lastPlacementIndex: null,
       passBannerActive: false,
-      placementGuardUntil: 0
+      placementGuardUntil: 0,
+      autoAdvanceTimer: null
+    };
+
+    const matchState = {
+      bestOf: 3,
+      winsNeeded: 2,
+      completed: false,
+      winnerId: null
+    };
+
+    const eventScheduleState = {
+      nextTriggerTurn: 3,
+      currentSpacing: 2,
+      intervalCounter: 0
     };
 
     const audioState = {
@@ -1296,6 +1444,7 @@
 
     function isBoardInteractionLocked() {
       const now = performance.now();
+      if (matchState.completed) return true;
       if (now < interactionState.inputLockedUntil) return true;
       if (now < roundState.placementGuardUntil) return true;
       if (roundState.passBannerActive) return true;
@@ -1435,8 +1584,20 @@
     function applySetupNames() {
       playerState.players.p1.name = ui.p1NameInput.value.trim() || "Player 1";
       playerState.players.p2.name = ui.p2NameInput.value.trim() || "Player 2";
+      applyMatchFormatFromSetup();
       updateSetupPreview();
       renderHud();
+    }
+
+    function applyMatchFormatFromSetup() {
+      const selected = Number.parseInt(ui.matchFormatSelect.value, 10);
+      const bestOf = [1, 3, 5].includes(selected) ? selected : 3;
+      matchState.bestOf = bestOf;
+      matchState.winsNeeded = Math.floor(bestOf / 2) + 1;
+    }
+
+    function formatBestOfLabel() {
+      return `Best of ${matchState.bestOf}`;
     }
 
     function updateSetupPreview() {
@@ -1446,9 +1607,10 @@
 
       const lines = [
         `Round ${roundState.roundNumber}: ${starter.name} starts first.`,
+        `${formatBestOfLabel()} match. First to ${matchState.winsNeeded} round win${matchState.winsNeeded > 1 ? "s" : ""} takes the match.`,
+        `${playerState.players.p1.name} ${playerState.players.p1.wins} - ${playerState.players.p2.wins} ${playerState.players.p2.name}`,
         "Player 1 always uses X. Player 2 always uses O.",
-        `Next round starter auto-switches to ${nextStarter.name}.`,
-        "Scoreboard persists across rounds."
+        `Next round starter auto-switches to ${nextStarter.name}.`
       ];
 
       for (const line of lines) {
@@ -1468,13 +1630,12 @@
       ui.turnText.style.color = current.mark === "X" ? "var(--x)" : "var(--o)";
 
       const starterName = playerState.players[roundState.starterId]?.name || playerState.players[roundState.nextStarterId].name;
-      ui.roundText.textContent = `Round ${roundState.roundNumber} | Starter: ${starterName}`;
+      ui.roundText.textContent = `Round ${roundState.roundNumber} | Starter: ${starterName} | Turn ${roundState.turnCounter}`;
 
       const p1 = playerState.players.p1;
       const p2 = playerState.players.p2;
       ui.scoreText.innerHTML = [
-        `<span>${escapeHtml(p1.name)} <span class="mark-x">(${p1.mark})</span>: <strong>${p1.wins}</strong></span>`,
-        `<span>${escapeHtml(p2.name)} <span class="mark-o">(${p2.mark})</span>: <strong>${p2.wins}</strong></span>`
+        `<span>${escapeHtml(p1.name)} <strong>${p1.wins}</strong> - <strong>${p2.wins}</strong> ${escapeHtml(p2.name)} (${formatBestOfLabel()})</span>`
       ].join("");
     }
 
@@ -1494,8 +1655,33 @@
       ui.passBanner.classList.remove("show");
     }
 
+    function showRoundBanner(message) {
+      ui.roundBanner.textContent = message;
+      ui.roundBanner.classList.add("show");
+    }
+
+    function hideRoundBanner() {
+      ui.roundBanner.classList.remove("show");
+      ui.roundBanner.textContent = "";
+    }
+
+    function hideMatchOverlay() {
+      ui.matchOverlay.hidden = true;
+    }
+
+    function showMatchOverlay(winnerId) {
+      const winner = playerState.players[winnerId];
+      const p1 = playerState.players.p1;
+      const p2 = playerState.players.p2;
+      ui.matchTitle.textContent = `Match Winner: ${winner.name}`;
+      ui.matchSubtitle.textContent = `${winner.name} reached ${matchState.winsNeeded} round wins.`;
+      ui.matchScore.textContent = `Final Score: ${p1.name} ${p1.wins} - ${p2.wins} ${p2.name} (${formatBestOfLabel()})`;
+      ui.matchOverlay.hidden = false;
+      playSfx("win");
+    }
+
     function updateGameControls() {
-      const lock = eventState.active || roundState.passBannerActive;
+      const lock = eventState.active || roundState.passBannerActive || matchState.completed || Boolean(roundState.autoAdvanceTimer);
       ui.nextRoundBtn.disabled = lock || !roundState.gameOver;
       ui.toSetupFromGameBtn.disabled = lock;
       ui.resetScoresBtn.disabled = lock;
@@ -1569,8 +1755,6 @@
     function resetEventStateForRound() {
       clearTimeout(eventState.alertTimer);
       eventState.alertTimer = null;
-      eventState.assigned = false;
-      eventState.hiddenByCell = new Map();
       eventState.active = false;
       eventState.phase = "idle";
       eventState.currentType = null;
@@ -1585,22 +1769,41 @@
     }
 
     function resetRoundRuntime() {
+      clearTimeout(roundState.autoAdvanceTimer);
+      roundState.autoAdvanceTimer = null;
       roundState.gameOver = false;
       roundState.winnerId = null;
+      roundState.turnCounter = 0;
       roundState.placementsRemaining = 1;
       roundState.extraTurnPending = false;
       roundState.mirrorConstraint = null;
       roundState.freezeRows = new Map();
-      roundState.playersWhoPlaced = new Set();
       roundState.lastPlacementIndex = null;
       roundState.passBannerActive = false;
       roundState.placementGuardUntil = 0;
       hidePassBanner();
+      hideRoundBanner();
     }
 
-    function startRoundFromSetup() {
-      applySetupNames();
-      initAudio();
+    function resetEventScheduleForRound() {
+      eventScheduleState.nextTriggerTurn = 3;
+      eventScheduleState.currentSpacing = 2;
+      eventScheduleState.intervalCounter = 0;
+    }
+
+    function resetMatchProgress() {
+      playerState.players.p1.wins = 0;
+      playerState.players.p2.wins = 0;
+      roundState.roundNumber = 1;
+      roundState.nextStarterId = "p1";
+      matchState.completed = false;
+      matchState.winnerId = null;
+      eventState.lastType = null;
+      hideMatchOverlay();
+    }
+
+    function beginRound() {
+      if (matchState.completed) return;
 
       roundState.starterId = roundState.nextStarterId;
       roundState.nextStarterId = otherPlayerId(roundState.starterId);
@@ -1609,6 +1812,7 @@
       resetBoardStateForRound();
       resetEventStateForRound();
       resetRoundRuntime();
+      resetEventScheduleForRound();
 
       setStatus(`${currentPlayer().name} opens the round.`);
       showScreen("game");
@@ -1620,19 +1824,40 @@
       updateBoardSizeForViewport();
     }
 
+    function startRoundFromSetup() {
+      applySetupNames();
+      initAudio();
+      resetMatchProgress();
+      beginRound();
+    }
+
     function startNextRound() {
-      if (!roundState.gameOver || eventState.active || roundState.passBannerActive) return;
+      if (!roundState.gameOver || eventState.active || roundState.passBannerActive || matchState.completed) return;
+      clearTimeout(roundState.autoAdvanceTimer);
+      roundState.autoAdvanceTimer = null;
       roundState.roundNumber += 1;
-      startRoundFromSetup();
+      beginRound();
     }
 
     function resetScores() {
       if (eventState.active || roundState.passBannerActive) return;
+      playerState.players.p1.name = ui.p1NameInput.value.trim() || "Player 1";
+      playerState.players.p2.name = ui.p2NameInput.value.trim() || "Player 2";
+      applyMatchFormatFromSetup();
+      clearTimeout(roundState.autoAdvanceTimer);
+      roundState.autoAdvanceTimer = null;
       playerState.players.p1.wins = 0;
       playerState.players.p2.wins = 0;
+      playerState.players.p1.matchWins = 0;
+      playerState.players.p2.matchWins = 0;
       roundState.roundNumber = 1;
       roundState.nextStarterId = "p1";
-      setStatus("Scores reset. Configure names and start a new round.");
+      matchState.completed = false;
+      matchState.winnerId = null;
+      eventState.lastType = null;
+      hideMatchOverlay();
+      hideRoundBanner();
+      setStatus("Scores reset. Configure names and start a new match.");
       updateSetupPreview();
       renderHud();
       showScreen("setup");
@@ -1885,7 +2110,11 @@
       const winnerMark = detectFiveInRowWinnerMark();
       if (winnerMark) {
         const winnerId = getPlayerIdByMark(winnerMark);
-        endRound(winnerId, `${playerState.players[winnerId].name} completed five-in-a-row.`);
+        endRound({
+          winnerId,
+          outcome: "five",
+          detail: `${playerState.players[winnerId].name} completed five-in-a-row.`
+        });
         return true;
       }
 
@@ -1893,11 +2122,23 @@
         const p1Len = longestChain(playerState.players.p1.mark);
         const p2Len = longestChain(playerState.players.p2.mark);
         if (p1Len > p2Len) {
-          endRound("p1", `Board sealed. Longest chain ${p1Len} vs ${p2Len}.`);
+          endRound({
+            winnerId: "p1",
+            outcome: "chain",
+            detail: `Board sealed. Longest chain ${p1Len} vs ${p2Len}.`
+          });
         } else if (p2Len > p1Len) {
-          endRound("p2", `Board sealed. Longest chain ${p2Len} vs ${p1Len}.`);
+          endRound({
+            winnerId: "p2",
+            outcome: "chain",
+            detail: `Board sealed. Longest chain ${p2Len} vs ${p1Len}.`
+          });
         } else {
-          endRound(null, `Board sealed. Equal longest chain ${p1Len}.`);
+          endRound({
+            winnerId: null,
+            outcome: "draw",
+            detail: `Board sealed. Equal longest chain ${p1Len}.`
+          });
         }
         return true;
       }
@@ -1908,24 +2149,63 @@
       return false;
     }
 
-    function endRound(winnerId, reason) {
+    function getMatchWinnerId() {
+      if (playerState.players.p1.wins >= matchState.winsNeeded) return "p1";
+      if (playerState.players.p2.wins >= matchState.winsNeeded) return "p2";
+      return null;
+    }
+
+    function endRound(result) {
+      if (roundState.gameOver) return;
+      const { winnerId, outcome, detail } = result;
       roundState.gameOver = true;
       roundState.winnerId = winnerId;
       roundState.passBannerActive = false;
+      clearTimeout(roundState.autoAdvanceTimer);
+      roundState.autoAdvanceTimer = null;
       hidePassBanner();
 
+      let bannerText = "Round Draw!";
       if (winnerId) {
         playerState.players[winnerId].wins += 1;
-        setStatus(`${playerState.players[winnerId].name} wins Round ${roundState.roundNumber}. ${reason}`);
+        if (outcome === "five") {
+          bannerText = `${playerState.players[winnerId].name} Wins the Round!`;
+        } else {
+          bannerText = `${playerState.players[winnerId].name} Wins by Longest Chain!`;
+        }
+        setStatus(`${bannerText} ${detail}`);
       } else {
-        setStatus(`Round ${roundState.roundNumber} is a draw. ${reason}`);
+        bannerText = "Round Draw!";
+        setStatus(`${bannerText} ${detail}`);
       }
 
       playSfx("win");
+      showRoundBanner(bannerText);
 
       teardownEventState();
       renderHud();
       renderBoard();
+
+      const matchWinnerId = getMatchWinnerId();
+      if (matchWinnerId) {
+        matchState.completed = true;
+        matchState.winnerId = matchWinnerId;
+        playerState.players[matchWinnerId].matchWins += 1;
+        setStatus(`${playerState.players[matchWinnerId].name} wins the match.`);
+        updateGameControls();
+        setTimeout(() => {
+          showMatchOverlay(matchWinnerId);
+        }, 900);
+        return;
+      }
+
+      roundState.autoAdvanceTimer = setTimeout(() => {
+        roundState.autoAdvanceTimer = null;
+        if (roundState.gameOver && !matchState.completed) {
+          roundState.roundNumber += 1;
+          beginRound();
+        }
+      }, 1600);
       updateGameControls();
     }
 
@@ -1967,6 +2247,12 @@
       updateGameControls();
 
       setTimeout(() => {
+        if (roundState.gameOver || matchState.completed) {
+          roundState.passBannerActive = false;
+          hidePassBanner();
+          updateGameControls();
+          return;
+        }
         roundState.passBannerActive = false;
         hidePassBanner();
         enforceMirrorConstraint();
@@ -2002,28 +2288,26 @@
       }
     }
 
-    function assignHiddenEvents() {
-      const emptyIndices = [];
-      for (let i = 0; i < CELL_COUNT; i += 1) {
-        if (isCellPlaceable(i)) emptyIndices.push(i);
+    function shouldTriggerEventThisTurn() {
+      if (roundState.turnCounter < 3) return false;
+      if (roundState.turnCounter !== eventScheduleState.nextTriggerTurn) return false;
+
+      eventScheduleState.intervalCounter += 1;
+      if (eventScheduleState.intervalCounter >= 2) {
+        eventScheduleState.currentSpacing += 1;
+        eventScheduleState.intervalCounter = 0;
       }
+      eventScheduleState.nextTriggerTurn = roundState.turnCounter + eventScheduleState.currentSpacing + 1;
+      return true;
+    }
 
-      if (!emptyIndices.length) {
-        eventState.assigned = true;
-        return;
-      }
-
-      const eventCount = Math.min(5, EVENT_TYPES.length, emptyIndices.length);
-      const selectedEvents = shuffle(EVENT_TYPES).slice(0, eventCount);
-      const selectedCells = shuffle(emptyIndices).slice(0, eventCount);
-
-      eventState.hiddenByCell = new Map();
-      selectedCells.forEach((index, i) => {
-        eventState.hiddenByCell.set(index, selectedEvents[i]);
-      });
-
-      eventState.assigned = true;
-      setStatus("Hidden chaos events are now armed on empty tiles.");
+    function pickEventType() {
+      const pool = EVENT_TYPES.length > 1 && eventState.lastType
+        ? EVENT_TYPES.filter((type) => type !== eventState.lastType)
+        : EVENT_TYPES.slice();
+      const eventType = pool[Math.floor(Math.random() * pool.length)];
+      eventState.lastType = eventType;
+      return eventType;
     }
 
     function startEventAlertVisuals() {
@@ -2823,7 +3107,7 @@
     }
 
     function onCellClick(index) {
-      if (roundState.gameOver) return;
+      if (roundState.gameOver || matchState.completed) return;
       if (!consumeTapDebounce()) return;
 
       if (eventState.active) {
@@ -3031,6 +3315,7 @@
     }
 
     function placeMark(index) {
+      if (matchState.completed) return;
       const cell = boardState.cells[index];
       if (!cell || !isCellPlaceable(index)) {
         setStatus("Tile unavailable.");
@@ -3047,20 +3332,15 @@
 
       cell.mark = currentPlayer().mark;
       roundState.lastPlacementIndex = index;
-      roundState.playersWhoPlaced.add(playerState.currentPlayerId);
+      roundState.turnCounter += 1;
       playSfx("place");
 
       renderBoard();
 
       if (evaluateBoardForEnd()) return;
 
-      if (!eventState.assigned && roundState.playersWhoPlaced.size >= 2) {
-        assignHiddenEvents();
-      }
-
-      if (eventState.assigned && eventState.hiddenByCell.has(index)) {
-        const eventType = eventState.hiddenByCell.get(index);
-        eventState.hiddenByCell.delete(index);
+      if (shouldTriggerEventThisTurn()) {
+        const eventType = pickEventType();
         beginEvent(eventType, playerState.currentPlayerId);
         return;
       }
@@ -3186,6 +3466,7 @@
       const syncSetup = () => applySetupNames();
       ui.p1NameInput.addEventListener("input", syncSetup);
       ui.p2NameInput.addEventListener("input", syncSetup);
+      ui.matchFormatSelect.addEventListener("change", syncSetup);
 
       ui.toSetupBtn.addEventListener("click", () => {
         applySetupNames();
@@ -3221,6 +3502,28 @@
         ui.crtToggleBtn.textContent = document.body.classList.contains("crt") ? "CRT: ON" : "CRT: OFF";
       });
 
+      ui.playNewMatchBtn.addEventListener("click", () => {
+        ui.p1NameInput.value = "Player 1";
+        ui.p2NameInput.value = "Player 2";
+        ui.matchFormatSelect.value = "3";
+        resetScores();
+        hideMatchOverlay();
+        showScreen("setup");
+      });
+
+      ui.rematchBtn.addEventListener("click", () => {
+        hideMatchOverlay();
+        initAudio();
+        resetMatchProgress();
+        beginRound();
+      });
+
+      ui.changeSettingsBtn.addEventListener("click", () => {
+        hideMatchOverlay();
+        applySetupNames();
+        showScreen("setup");
+      });
+
       window.addEventListener("pointerdown", () => {
         initAudio();
       }, { once: true });
@@ -3243,7 +3546,7 @@
       resetEventStateForRound();
       applySetupNames();
       updateSetupPreview();
-      setStatus("Configure names, then start a round.");
+      setStatus("Configure names, then start a match.");
       renderHud();
       renderBoard();
       updateBoardSizeForViewport();
